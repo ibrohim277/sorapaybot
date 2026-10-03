@@ -113,3 +113,4 @@ Tekshirish: `https://api.telegram.org/bot<TOKEN>/getWebhookInfo`
   papkasidagi vaqtinchalik holat (masalan hali yechilmagan captcha)
   yo'qolishi mumkin — foydalanuvchi qayta `/start` bossa yetarli.
 - 15 daqiqa harakatsizlikdan keyin "uxlab qoladi" (cold start sekinroq bo'ladi).
+# sorapaybot
