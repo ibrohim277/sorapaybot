@@ -1,45 +1,67 @@
 # SoraPayBot (Python porti)
 
 Telegram Stars / Premium / Gift / TON sotib olish boti.
-Asl loyiha PHP'da yozilgan edi (`channel_db.php` + `index.php` + `admin/*`);
-bu — o'sha loyihaning Python/Flask'ga o'tkazilgan versiyasi.
+Asl loyiha PHP'da yozilgan edi; bu — Python/Flask'ga o'tkazilgan versiyasi.
 
 ## ⚠️ Hozirgi holat (muhim!)
 
 Bu loyiha **hali to'liq tugallanmagan**. Quyidagilar yozildi va **real test
 qilindi** (Flask test client orqali, soxta Telegram update'lar bilan):
 
-- ✅ `config/channel_db.py` + `config/channel_sql.py` + `config/channel_pdo.py`
-  — ChannelDB dvigateli (Telegram kanalni "baza" sifatida ishlatish). Asl
-  PHP versiyasida topilgan barcha bug'lar (LIMIT ishlamasligi, `WHERE 1=1`
-  doim yolg'on chiqishi, `INSERT ... SET` tushunilmasligi) shu yerda
-  **tuzatilgan holda** portlangan.
-- ✅ `telegram_bot.py` — Telegram Bot API bilan ishlash uchun umumiy wrapper.
-- ✅ `main.py` — webhook kirish nuqtasi, obunani majburiy tekshirish
-  (`majburiy()` / `check()` / `Tugma_Edit()`), oddiy va referal orqali
-  ro'yxatdan o'tish (captcha bilan).
+- ✅ `config/channel_db.py` + `channel_sql.py` + `channel_pdo.py` — ChannelDB
+  dvigateli (Telegram kanalni "baza" sifatida ishlatish). Asl PHP versiyasida
+  topilgan barcha bug'lar (LIMIT ishlamasligi, `WHERE 1=1` doim yolg'on
+  chiqishi, `INSERT ... SET` tushunilmasligi) shu yerda tuzatilgan.
+- ✅ `telegram_bot.py` — Telegram Bot API umumiy wrapper.
+- ✅ `main.py` — webhook, majburiy obuna tekshiruvi, oddiy va referal+captcha
+  orqali ro'yxatdan o'tish.
+- ✅ `BuyTon/`, `BuyStars/` — TON yuborish va Fragment.com orqali Stars/Premium
+  sotib olish skriptlari (asl kod ham Python edi, ko'chirildi).
 
-**Hali yozilmagan:** Stars/Premium/Gift/TON xarid oqimlari, captcha
-tekshirish handleri, referal/profil/statistika bo'limlari, admin panel
-(`admin/admin.php`, `admin/api.php`), TON to'lov webhook'i
-(`Ton_webhook.php`), mini-app API (`web/api/*`).
+**Hali yozilmagan:** bot ichidagi Stars/Premium/Gift/TON xarid **suhbat
+oqimi** (tugmalar bosilganda), captcha tekshirish handleri, referal/profil/
+statistika bo'limlari, admin panel, TON to'lov webhook'i, mini-app API.
 
-Botni productionda **to'liq** ishlatishdan oldin, shu qolgan qismlar ham
-yozilishi kerak — hozircha botga `/start` yozish, obuna tekshiruvi va
-ro'yxatdan o'tish ishlaydi, lekin "Stars olish" kabi tugmalar hali javob
-bermaydi.
+## ⚠️ Sozlamalar haqida — MUHIM
+
+`config/settings.py` ichidagi barcha qiymatlar **to'g'ridan-to'g'ri kodga
+yozilgan** (hardcoded), chunki bu repo **private**. Environment variable
+kiritish shart emas.
+
+**Lekin quyidagi 2 ta qiymat asl kodingizda ham bo'sh edi — bular hali ham
+bo'sh, botni ishga tushirishdan oldin `config/settings.py` faylini ochib
+qo'lingiz bilan to'ldiring:**
+
+```python
+BOT_TOKEN = ''   # BotFather'dan olasiz
+MNEMONIC = ''    # hamyoningizning 24 so'zlik maxfiy iborasi
+```
+
+`TONAPI_KEY` ham bo'sh, lekin hozircha kodda ishlatilmayapti (TON webhook
+qismi hali yozilmagan), shuning uchun shoshilinch emas.
+
+Qolgan hammasi (`ADMIN_ID`, `LOG_CHANNEL_ID`, `DB_CHANNEL_ID`, `API_TON`,
+`FRAGMENT_*`, `STEL_*`) — asl kodingizdagi haqiqiy qiymatlar bilan allaqachon
+to'ldirilgan.
+
+> Eslatma: repo private bo'lsa ham, bu qiymatlar (ayniqsa `API_TON` va
+> `STEL_*` sessiya token'lari) amaldagi kalitlar — tokenga ega bo'lgan har
+> qanday hamkor yoki xizmat (masalan GitHub xodimlari, CI/CD integratsiyasi)
+> nazariy jihatdan ularni ko'rishi mumkinligini yodda tuting.
 
 ## Loyiha tuzilishi
 
 ```
 config/
-  settings.py       — barcha sozlamalar (environment variable'lardan o'qiydi)
-  channel_db.py      — ChannelDB: Telegram kanalga asoslangan saqlash qatlami
-  channel_sql.py      — mini SQL-parser (SELECT/INSERT/UPDATE/DELETE)
-  channel_pdo.py      — admin panel uchun PDO-ga o'xshash qatlam
-  username_info.py    — Fragment.com orqali username tekshirish
-telegram_bot.py        — Telegram Bot API umumiy wrapper
-main.py                 — Flask webhook (asosiy bot handleri)
+  settings.py        — barcha sozlamalar (hardcoded)
+  channel_db.py       — ChannelDB: Telegram kanalga asoslangan saqlash qatlami
+  channel_sql.py       — mini SQL-parser (SELECT/INSERT/UPDATE/DELETE)
+  channel_pdo.py       — admin panel uchun PDO-ga o'xshash qatlam
+  username_info.py     — Fragment.com orqali username tekshirish
+telegram_bot.py         — Telegram Bot API umumiy wrapper
+main.py                  — Flask webhook (asosiy bot handleri)
+BuyTon/main.py           — TON yuborish (tonutils)
+BuyStars/                — Fragment.com orqali Stars/Premium sotib olish
 requirements.txt, Procfile, render.yaml, runtime.txt — deploy fayllari
 ```
 
@@ -50,81 +72,44 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
-cp .env.example .env
-# .env faylini to'ldiring: BOT_TOKEN, BASE_URL va h.k.
+# config/settings.py ichida BOT_TOKEN va MNEMONIC'ni to'ldiring
 
 python3 main.py
 # yoki production uslubida:
 gunicorn main:app --bind 0.0.0.0:8080
 ```
 
-Keyin ngrok yoki shunga o'xshash tunnel orqali webhookni sozlang, yoki
-to'g'ridan-to'g'ri Render'ga deploy qiling (pastga qarang).
-
 ## Render.com'ga deploy qilish
 
-### 1-usul — Blueprint (`render.yaml`) orqali, eng oson
+### Blueprint (`render.yaml`) orqali — eng oson
 
 1. Render Dashboard → **New** → **Blueprint**.
 2. Shu GitHub repo'ni tanlang (`muslihiddinlive/sorapay`).
-3. Render `render.yaml`ni o'qib, xizmatni avtomatik sozlaydi.
-4. **Environment** bo'limida quyidagilarni qo'ling (`sync: false` bo'lgani
-   uchun bular qo'lda kiritiladi):
-   - `BOT_TOKEN` — BotFather'dan olingan token
-   - `BASE_URL` — Render sizga bergan URL, masalan `https://sorapay.onrender.com`
-     (birinchi deploy'dan keyin paydo bo'ladi, keyin shuni kiritib qayta deploy qiling)
-   - `DB_CHANNEL_ID`, `ADMIN_ID`, `LOG_CHANNEL_ID`, `TONAPI_KEY`
-5. **Deploy** tugmasini bosing.
+3. Render `render.yaml`ni o'qib, xizmatni avtomatik sozlaydi — environment
+   variable kiritish **shart emas** (hammasi kodda).
+4. **Deploy**ni bosing.
+5. Deploy tugagach, Render sizga URL beradi (masalan
+   `https://sorapay.onrender.com` yoki boshqa, agar nom band bo'lsa). Agar bu
+   `config/settings.py`dagi `BASE_URL` bilan **bir xil bo'lmasa**, shu faylda
+   `BASE_URL`ni to'g'ri qiymatga almashtirib, qayta push qiling.
 
-### 2-usul — qo'lda Web Service
+### Qo'lda Web Service
 
 1. Render Dashboard → **New** → **Web Service** → shu repo'ni tanlang.
 2. **Build Command:** `pip install -r requirements.txt`
 3. **Start Command:** `gunicorn main:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60`
-4. Yuqoridagi environment variable'larni qo'lda kiriting.
-5. Deploy qiling.
+4. Deploy qiling (environment variable kerak emas).
 
 ### Webhookni o'rnatish
 
 Bot kodi har bir so'rovda o'zi `setWebhook` chaqiradi (`BASE_URL` orqali),
-shuning uchun `BASE_URL`ni to'g'ri kiritib qayta deploy qilsangiz, webhook
-avtomatik o'rnatiladi. Tekshirish uchun:
+shuning uchun `BASE_URL` to'g'ri bo'lsa, webhook avtomatik o'rnatiladi.
+Tekshirish: `https://api.telegram.org/bot<TOKEN>/getWebhookInfo`
 
-```
-https://api.telegram.org/bot<TOKEN>/getWebhookInfo
-```
+### ⚠️ Free tarif haqida
 
-### ⚠️ Free tarif haqida muhim eslatma
-
-- Render **Free** tarifida fayl tizimi **doimiy emas** — har deploy/restart'da
-  tozalanadi. Bu katta muammo emas, chunki `ChannelDB` lokal fayl topilmasa
-  Telegram kanalidagi zaxiradan **o'zi tiklanadi** (`channel_db.py` dagi
-  `_load_table`/`_load_index` shuning uchun yozilgan). Faqat `step/` papkasidagi
-  vaqtinchalik holat (masalan hali yechilmagan captcha xabari) restart paytida
-  yo'qolishi mumkin — foydalanuvchi shunchaki qayta `/start` bossa yetarli.
-- Free tarif 15 daqiqa harakatsizlikdan keyin "uxlab qoladi" — birinchi so'rov
-  sekinroq (cold start) keladi. Agar bu muammo bo'lsa, Starter tarifga o'ting
-  yoki tashqi "ping" xizmati bilan uni uyg'oq tutib turing.
-
-## Environment Variable'lar ro'yxati
-
-| Nomi | Tavsif |
-|---|---|
-| `BOT_TOKEN` | BotFather'dan olingan bot tokeni |
-| `BASE_URL` | Botning public URL manzili (webhook + ichki fayl so'rovlari uchun) |
-| `DB_CHANNEL_ID` | ChannelDB uchun private kanal ID (`-100...`) |
-| `ADMIN_ID` | Admin Telegram user ID |
-| `LOG_CHANNEL_ID` | Log kanal ID |
-| `TONAPI_KEY` | tonapi.io API kaliti (kiruvchi TON to'lovini tekshirish uchun — hali ishlatilmayapti) |
-| `DEBUG` | `1`/`0` |
-| `API_TON` | tonconsole.com'dan olingan API key (TON yuborish uchun, `BuyTon`/`BuyStars`) |
-| `MNEMONIC` | Hamyon 24 so'zlik maxfiy iborasi (probel bilan ajratilgan) |
-| `FRAGMENT_HASH`, `FRAGMENT_PUBLICKEY`, `FRAGMENT_WALLETS`, `FRAGMENT_ADDRES` | Fragment.com hisobingiz ulangandan keyin olinadigan qiymatlar |
-| `STEL_SSID`, `STEL_DT`, `STEL_TON_TOKEN`, `STEL_TOKEN` | Fragment.com sessiya cookie'lari |
-
-> ⚠️ **Xavfsizlik eslatmasi:** `API_TON`, `MNEMONIC` va `STEL_*` qiymatlar
-> avvalgi zip faylida tayyor (haqiqiy) holda topilgan edi. Ular endi kodga
-> yozilmagan — faqat environment variable orqali beriladi. Agar bu qiymatlar
-> ilgari biror joyda (masalan boshqa repo, chat, screenshot) oshkor bo'lgan
-> bo'lsa, ehtiyot uchun tonconsole.com va Fragment.com'da yangilab olish
-> tavsiya etiladi.
+- Fayl tizimi doimiy emas (har restart'da tozalanadi) — muammo emas, chunki
+  `ChannelDB` Telegram kanalidagi zaxiradan o'zi tiklanadi. Faqat `step/`
+  papkasidagi vaqtinchalik holat (masalan hali yechilmagan captcha)
+  yo'qolishi mumkin — foydalanuvchi qayta `/start` bossa yetarli.
+- 15 daqiqa harakatsizlikdan keyin "uxlab qoladi" (cold start sekinroq bo'ladi).

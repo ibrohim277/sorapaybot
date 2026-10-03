@@ -1,54 +1,48 @@
 """
 config/config.php ning Python porti.
-Barcha global sozlamalar shu yerda.
+Barcha sozlamalar shu yerda hardcoded (repo private bo'lgani uchun).
 
-DIQQAT: maxfiy qiymatlar (BOT_TOKEN, TONAPI_KEY, DB_CHANNEL_ID) endi
-environment variable'lardan o'qiladi — GitHub'ga ochiq push qilish
-xavfsiz bo'lishi uchun. Render.com'da "Environment" bo'limiga shu
-nomlar bilan qo'shing (.env.example faylga qarang).
+BOT_TOKEN va MNEMONIC asl kodda ham bo'sh edi — bular hech qayerda
+berilmagan, shu yerga o'zingiz to'ldirishingiz kerak.
 """
 import os
-from dotenv import load_dotenv
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-load_dotenv(os.path.join(BASE_DIR, '.env'))  # lokalda .env bo'lsa yuklaydi; Render'da .env yo'q, shunchaki o'tkazib yuboradi
 
-BOT_TOKEN = os.environ.get('BOT_TOKEN', '')
+BOT_TOKEN = ''   # <-- BotFather'dan olingan tokenni shu yerga yozing
 API_URL = f'https://api.telegram.org/bot{BOT_TOKEN}/'
 
 # --- ChannelDB sozlamalari (MySQL o'rniga) ---
-DB_CHANNEL_ID = int(os.environ.get('DB_CHANNEL_ID', '-1004403059476'))
-DB_DATA_DIR = os.environ.get('DB_DATA_DIR', os.path.join(BASE_DIR, 'storage', 'db'))
+DB_CHANNEL_ID = -1004403059476
+DB_DATA_DIR = os.path.join(BASE_DIR, 'storage', 'db')
 
-ADMIN_ID = int(os.environ.get('ADMIN_ID', '2142292702'))
-LOG_CHANNEL_ID = int(os.environ.get('LOG_CHANNEL_ID', '-1003991077401'))
-TONAPI_KEY = os.environ.get('TONAPI_KEY', '')   # tonapi.io kalitingiz
-BASE_URL = os.environ.get('BASE_URL', '')       # Render'dagi public URL, masalan: https://sorapay.onrender.com
+ADMIN_ID = 2142292702
+LOG_CHANNEL_ID = -1003991077401
+TONAPI_KEY = ''   # tonapi.io kalitingiz (hali kodda ishlatilmayapti)
+BASE_URL = 'https://sorapay.onrender.com'   # Render servis nomi "sorapay" bo'lgani uchun odatda shu manzil bo'ladi.
+                                             # Agar Render boshqa manzil bersa (masalan "sorapay" band bo'lib chiqsa),
+                                             # shu yerni Render haqiqiy bergan URL bilan almashtirib qayta push qiling.
 
-DEBUG = os.environ.get('DEBUG', '1') == '1'
+DEBUG = True
 
-STEP_DIR = os.environ.get('STEP_DIR', os.path.join(BASE_DIR, 'step'))
+STEP_DIR = os.path.join(BASE_DIR, 'step')
 os.makedirs(STEP_DIR, exist_ok=True)
 os.makedirs(DB_DATA_DIR, exist_ok=True)
 
 # --- TON yuborish (BuyTon/, BuyStars/) va Fragment.com integratsiyasi ---
-# DIQQAT: bular asl zip'da ichiga haqiqiy qiymatlar bilan to'ldirilgan edi —
-# GitHub'ga ochiq ketmasligi uchun endi environment variable'ga ko'chirildi.
-# Agar bu qiymatlar boshqa joyda (masalan eski zip) oshkor bo'lgan bo'lsa,
-# ehtiyot shart uchun tonconsole.com/Fragment'da yangilab qo'yish tavsiya etiladi.
-API_TON = os.environ.get('API_TON', '')            # https://tonconsole.com/ dan olingan api key
-MNEMONIC = os.environ.get('MNEMONIC', '')           # 24 so'zlik hamyon maxfiy iborasi, probel bilan ajratilgan
+API_TON = "AH6VGUQHYLVXFGQAAAAE6E5OK5T4H7TF3DSHJCHSJ4XNUTEIXPXQAYSSPI4ZLUERNDXWDVI"
+MNEMONIC = ''   # <-- hamyon 24 so'zlik maxfiy iborasi, probel bilan ajratib yozing (asl kodda ham bo'sh edi)
 MNEMONIC_LIST = MNEMONIC.split() if MNEMONIC else []
 
-FRAGMENT_HASH = os.environ.get('FRAGMENT_HASH', '')
-FRAGMENT_PUBLICKEY = os.environ.get('FRAGMENT_PUBLICKEY', '')
-FRAGMENT_WALLETS = os.environ.get('FRAGMENT_WALLETS', '')
-FRAGMENT_ADDRES = os.environ.get('FRAGMENT_ADDRES', '')
+FRAGMENT_HASH = '03290a4624161419'
+FRAGMENT_PUBLICKEY = 'bd9767479817f5587029a3c131fadedfd4bcad456ec66729a9bd078034fb234d'
+FRAGMENT_WALLETS = 'te6cckECFgEAAwQAAgE0ARUBFP8A9KQT9LzyyAsCAgEgAxACAUgEBwLm0AHQ0wMdIz0M='
+FRAGMENT_ADDRES = '0:c16230bea882a7dfc38c25734de1965d4651198718c130e32dabe0011352c'
 
-STEL_SSID = os.environ.get('STEL_SSID', '')
-STEL_DT = os.environ.get('STEL_DT', '-300')
-STEL_TON_TOKEN = os.environ.get('STEL_TON_TOKEN', '')
-STEL_TOKEN = os.environ.get('STEL_TOKEN', '')
+STEL_SSID = '547c9d2018b8804a79_422117814560415'
+STEL_DT = '-300'
+STEL_TON_TOKEN = '_gKZvwRyzR9bgBSETHYXG4qyooQQNnpj3S3CJSnsjdKKMK6CaM5wdeSRKbrIJPH7Fe5Laka3mMuNvWza6KCKCnBimcYvHRn-rAljca-XJkc5iyCj1edZISZ4Vx3Tk1vD9o_7hzipq8bQLrYhHPnWxsuS0W2VLt7E-0sSeYbJn-dz'
+STEL_TOKEN = 'ab85018e4ebeb5c9c24f50aac392dc25ab8561464ab850c59b5cd294560a40dd5b7724a'
 
 FRAGMENT_COOKIES = {
     'stel_ssid': STEL_SSID,
