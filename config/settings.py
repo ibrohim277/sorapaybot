@@ -9,14 +9,14 @@ import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-BOT_TOKEN = ''   # <-- BotFather'dan olingan tokenni shu yerga yozing
+BOT_TOKEN = '8708750764:AAHzooamiDcBmPnupRZaDv2L5itr2x70QKE'   # <-- BotFather'dan olingan tokenni shu yerga yozing
 API_URL = f'https://api.telegram.org/bot{BOT_TOKEN}/'
 
 # --- ChannelDB sozlamalari (MySQL o'rniga) ---
 DB_CHANNEL_ID = -1004403059476
 DB_DATA_DIR = os.path.join(BASE_DIR, 'storage', 'db')
 
-ADMIN_ID = 2142292702
+ADMIN_ID = 6920473195
 LOG_CHANNEL_ID = -1003991077401
 TONAPI_KEY = ''   # tonapi.io kalitingiz (hali kodda ishlatilmayapti)
 BASE_URL = 'https://sorapay.onrender.com'   # Render servis nomi "sorapay" bo'lgani uchun odatda shu manzil bo'ladi.
