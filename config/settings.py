@@ -30,3 +30,29 @@ DEBUG = os.environ.get('DEBUG', '1') == '1'
 STEP_DIR = os.environ.get('STEP_DIR', os.path.join(BASE_DIR, 'step'))
 os.makedirs(STEP_DIR, exist_ok=True)
 os.makedirs(DB_DATA_DIR, exist_ok=True)
+
+# --- TON yuborish (BuyTon/, BuyStars/) va Fragment.com integratsiyasi ---
+# DIQQAT: bular asl zip'da ichiga haqiqiy qiymatlar bilan to'ldirilgan edi —
+# GitHub'ga ochiq ketmasligi uchun endi environment variable'ga ko'chirildi.
+# Agar bu qiymatlar boshqa joyda (masalan eski zip) oshkor bo'lgan bo'lsa,
+# ehtiyot shart uchun tonconsole.com/Fragment'da yangilab qo'yish tavsiya etiladi.
+API_TON = os.environ.get('API_TON', '')            # https://tonconsole.com/ dan olingan api key
+MNEMONIC = os.environ.get('MNEMONIC', '')           # 24 so'zlik hamyon maxfiy iborasi, probel bilan ajratilgan
+MNEMONIC_LIST = MNEMONIC.split() if MNEMONIC else []
+
+FRAGMENT_HASH = os.environ.get('FRAGMENT_HASH', '')
+FRAGMENT_PUBLICKEY = os.environ.get('FRAGMENT_PUBLICKEY', '')
+FRAGMENT_WALLETS = os.environ.get('FRAGMENT_WALLETS', '')
+FRAGMENT_ADDRES = os.environ.get('FRAGMENT_ADDRES', '')
+
+STEL_SSID = os.environ.get('STEL_SSID', '')
+STEL_DT = os.environ.get('STEL_DT', '-300')
+STEL_TON_TOKEN = os.environ.get('STEL_TON_TOKEN', '')
+STEL_TOKEN = os.environ.get('STEL_TOKEN', '')
+
+FRAGMENT_COOKIES = {
+    'stel_ssid': STEL_SSID,
+    'stel_dt': STEL_DT,
+    'stel_ton_token': STEL_TON_TOKEN,
+    'stel_token': STEL_TOKEN,
+}

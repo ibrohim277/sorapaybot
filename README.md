@@ -115,5 +115,16 @@ https://api.telegram.org/bot<TOKEN>/getWebhookInfo
 | `DB_CHANNEL_ID` | ChannelDB uchun private kanal ID (`-100...`) |
 | `ADMIN_ID` | Admin Telegram user ID |
 | `LOG_CHANNEL_ID` | Log kanal ID |
-| `TONAPI_KEY` | tonapi.io API kaliti |
+| `TONAPI_KEY` | tonapi.io API kaliti (kiruvchi TON to'lovini tekshirish uchun — hali ishlatilmayapti) |
 | `DEBUG` | `1`/`0` |
+| `API_TON` | tonconsole.com'dan olingan API key (TON yuborish uchun, `BuyTon`/`BuyStars`) |
+| `MNEMONIC` | Hamyon 24 so'zlik maxfiy iborasi (probel bilan ajratilgan) |
+| `FRAGMENT_HASH`, `FRAGMENT_PUBLICKEY`, `FRAGMENT_WALLETS`, `FRAGMENT_ADDRES` | Fragment.com hisobingiz ulangandan keyin olinadigan qiymatlar |
+| `STEL_SSID`, `STEL_DT`, `STEL_TON_TOKEN`, `STEL_TOKEN` | Fragment.com sessiya cookie'lari |
+
+> ⚠️ **Xavfsizlik eslatmasi:** `API_TON`, `MNEMONIC` va `STEL_*` qiymatlar
+> avvalgi zip faylida tayyor (haqiqiy) holda topilgan edi. Ular endi kodga
+> yozilmagan — faqat environment variable orqali beriladi. Agar bu qiymatlar
+> ilgari biror joyda (masalan boshqa repo, chat, screenshot) oshkor bo'lgan
+> bo'lsa, ehtiyot uchun tonconsole.com va Fragment.com'da yangilab olish
+> tavsiya etiladi.
