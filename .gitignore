@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+venv/
+.venv/
+
+# ChannelDB mahalliy keshi va vaqtinchalik step fayllari —
+# haqiqiy ma'lumot Telegram kanalida saqlanadi, bular shunchaki kesh.
+storage/db/*.json
+step/*.txt
+step/*.step
+
+.DS_Store
+*.log

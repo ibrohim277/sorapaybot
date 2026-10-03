@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: sorapay
+    runtime: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn main:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60"
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: BASE_URL
+        sync: false
+      - key: DB_CHANNEL_ID
+        sync: false
+      - key: ADMIN_ID
+        sync: false
+      - key: LOG_CHANNEL_ID
+        sync: false
+      - key: TONAPI_KEY
+        sync: false
+      - key: DEBUG
+        value: "0"
+    # Eslatma: Free tarifda persistent disk yo'q — bu muammo emas, chunki
+    # ChannelDB lokal fayl o'chib qolsa, Telegram kanalidan o'zi tiklaydi.
+    # Agar Starter+ tarifga o'tsangiz, shu yerga disk qo'shishingiz mumkin:
+    # disk:
+    #   name: sorapay-storage
+    #   mountPath: /opt/render/project/src/storage
+    #   sizeGB: 1
