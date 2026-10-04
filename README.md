@@ -115,3 +115,4 @@ Tekshirish: `https://api.telegram.org/bot<TOKEN>/getWebhookInfo`
 - 15 daqiqa harakatsizlikdan keyin "uxlab qoladi" (cold start sekinroq bo'ladi).
 # sorapaybot
 # sorapaybot
+# sorapaybot
