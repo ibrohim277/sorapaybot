@@ -19,7 +19,7 @@ DB_DATA_DIR = os.path.join(BASE_DIR, 'storage', 'db')
 ADMIN_ID = 6920473195
 LOG_CHANNEL_ID = -1003991077401
 TONAPI_KEY = ''   # tonapi.io kalitingiz (hali kodda ishlatilmayapti)
-BASE_URL = 'https://sorapay.onrender.com'   # Render servis nomi "sorapay" bo'lgani uchun odatda shu manzil bo'ladi.
+BASE_URL = 'https://sorapaybot.onrender.com'   # Render servis nomi "sorapay" bo'lgani uchun odatda shu manzil bo'ladi.
                                              # Agar Render boshqa manzil bersa (masalan "sorapay" band bo'lib chiqsa),
                                              # shu yerni Render haqiqiy bergan URL bilan almashtirib qayta push qiling.
 
