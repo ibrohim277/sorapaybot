@@ -18,6 +18,7 @@ from config.channel_sql import (
     cdb_real_escape_string, cdb_affected_rows,
 )
 from telegram_bot import Begzod, tg_from
+from handlers import handle_callback
 from config.username_info import chekusername, chekPremiumUsername
 
 logging.basicConfig(level=logging.INFO)
@@ -430,8 +431,8 @@ def register_with_referral(bot: Begzod, from_id, first_name: str, username: str,
 
         cdb_query(connect, f"""INSERT INTO users SET
 user_id='{from_id}',
-first_name='{first_name}',
-username='{username}',
+first_name='{cdb_real_escape_string(connect, first_name)}',
+username='{cdb_real_escape_string(connect, username)}',
 ref_id='{user_ref_id}',
 user_ref_id='{pas}',
 captcha='{captcha}',
@@ -474,8 +475,8 @@ def silent_register_if_new(from_id, first_name: str, username: str) -> None:
         sana = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         cdb_query(connect, f"""INSERT INTO users SET
 user_id='{from_id}',
-first_name='{first_name}',
-username='{username}',
+first_name='{cdb_real_escape_string(connect, first_name)}',
+username='{cdb_real_escape_string(connect, username)}',
 user_ref_id='{pas}',
 captcha_required='0',
 captcha_passed='1',
@@ -565,7 +566,8 @@ def webhook():
 
     # --- check_obuna callback ---
     if data_val == 'check_obuna':
-        check_obuna_status(from_id, bot, True, first_name or '')
+        if check_obuna_status(from_id, bot, True, first_name or ''):
+            bot.answerCallbackQuery({'callback_query_id': cq.id})
 
     # --- chat_join_request (majburiy kanalga so'rov yuborib qo'shilish) ---
     chat_join_request = getattr(update, 'chat_join_request', None)
@@ -592,9 +594,13 @@ def webhook():
     if chat_type == 'private':
         silent_register_if_new(from_id, first_name or '', username or '')
 
-    # TODO: keyingi bosqich — xarid oqimlari (Stars/Premium/Gift/TON),
-    # captcha tekshiruvi, referal/profil/statistika, admin.php integratsiyasi
-    # shu yerga ulanadi (handlers_*.py modullaridan).
+    # --- inline tugmalar (menyu, captcha, profil, referal, statistika, xaridlar) ---
+    if cq is not None and data_val != 'check_obuna':
+        handle_callback(bot, cq, connect, send_main_menu, majburiy)
+        return 'ok'
+
+    # TODO: xarid oqimlari (Stars/Premium/Gift/TON) — handlers.py dagi
+    # NOT_READY_TITLES o'rniga haqiqiy handlerlar yoziladi.
 
     return 'ok'
 
