@@ -205,7 +205,7 @@ def handle_callback(bot, cq, connect, send_main_menu, majburiy) -> None:
             _answer(bot, cq)
     except Exception:
         logger.exception("Callback handlerda xato (data=%r)", data)
-        try:
+        try:    
             _answer(bot, cq, "Xatolik yuz berdi, birozdan so'ng qayta urinib ko'ring.", True)
         except Exception:
             pass
