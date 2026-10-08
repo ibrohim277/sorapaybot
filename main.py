@@ -510,15 +510,12 @@ def _is_duplicate_update(update) -> bool:
         return False
 
 
-<<<<<<< HEAD
 @app.route('/', methods=['GET', 'HEAD'])
 def health():
     """Render health-check uchun (405 xatosini oldini oladi)."""
     return 'SoraPayBot ishlayapti', 200
 
 
-=======
->>>>>>> 396de28125b901daa7a9b9d4c7dad52d1eeab4c7
 @app.route('/index.php', methods=['POST'])
 @app.route('/', methods=['POST'])
 def webhook():
