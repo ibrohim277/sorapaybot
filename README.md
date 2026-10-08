@@ -42,6 +42,7 @@ Admin buyruqlari: `/karta` (to'lov kartasi), `/kurs 31500` yoki `/kurs auto` (TO
 
 > ⚠️ Gunicorn **bitta worker** (`--workers 1 --threads 8`) bilan ishlashi shart: baza jadvallari
 > jarayon xotirasida keshlanadi, ikki worker bo'lsa buyurtmalar bir-birini ko'rmay qoladi.
+<<<<<<< HEAD
 
 ## Muammolarni aniqlash
 
@@ -57,6 +58,8 @@ Loglarda qidiring:
 - `⛔ DB KANALIGA ULANIB BO'LMADI` — `chat not found`: **bot DB kanalida ADMIN emas** yoki `DB_CHANNEL_ID`
   noto'g'ri yoki `BOT_TOKEN` kanalga qo'shilmagan botniki. Tuzatilmasa, ma'lumotlar (foydalanuvchilar,
   buyurtmalar, karta) faqat lokal diskda turadi va Render qayta ishga tushganda **yo'qoladi**.
+=======
+>>>>>>> 396de28125b901daa7a9b9d4c7dad52d1eeab4c7
 
 ## ⚠️ Sozlamalar haqida — MUHIM
 
@@ -99,7 +102,10 @@ telegram_bot.py         — Telegram Bot API umumiy wrapper
 main.py                  — Flask webhook (asosiy bot handleri)
 handlers.py              — inline tugmalar router (menyu, captcha, profil, referal, statistika)
 orders.py                — Stars/Premium/Gift/TON xarid oqimlari, to'lov, admin tasdig'i
+<<<<<<< HEAD
 diagnostics.py           — /diag tashxis buyrug'i va ishga tushish tekshiruvi
+=======
+>>>>>>> 396de28125b901daa7a9b9d4c7dad52d1eeab4c7
 BuyTon/main.py           — TON yuborish (tonutils)
 BuyStars/                — Fragment.com orqali Stars/Premium sotib olish
 requirements.txt, Procfile, render.yaml, runtime.txt — deploy fayllari

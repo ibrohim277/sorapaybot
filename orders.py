@@ -865,6 +865,7 @@ def handle_message(bot, msg, connect, send_main_menu) -> bool:
     _CONNECT_REF['c'] = connect
     text = (getattr(msg, 'text', '') or '').strip()
 
+<<<<<<< HEAD
     cmd0 = text.split(maxsplit=1)[0].split('@')[0].lower() if text.startswith('/') else ''
 
     if cmd0 == '/id':   # hamma uchun: ADMIN_ID mos kelmayotganini aniqlashga yordam beradi
@@ -883,6 +884,8 @@ def handle_message(bot, msg, connect, send_main_menu) -> bool:
         _send(bot, ctx.chat_id, diagnostics.format_report(diagnostics.run_checks(bot, connect, full=True)))
         return True
 
+=======
+>>>>>>> 396de28125b901daa7a9b9d4c7dad52d1eeab4c7
     if text.startswith('/') and _is_admin(ctx.uid):
         if _admin_command(ctx, text):
             return True
