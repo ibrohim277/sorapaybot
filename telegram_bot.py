@@ -6,10 +6,13 @@ Natija PHP'dagi json_decode($response) (obyekt) uslubida — SimpleNamespace bil
 shunda `update.message.chat.id` kabi nuqta bilan murojaat qilish mumkin.
 """
 import json
+import logging
 import requests
 from types import SimpleNamespace
 
 from config.settings import API_URL
+
+logger = logging.getLogger("sorapay.tg")
 
 
 def tg_from(obj):
@@ -51,10 +54,16 @@ class Begzod:
         url = API_URL + method
         try:
             resp = requests.post(url, json=params, headers={'Content-Type': 'application/json'}, timeout=15)
-        except requests.RequestException:
+        except requests.RequestException as e:
+            logger.error("[TG] %s: tarmoq xatosi: %s", method, type(e).__name__)
             return None
         try:
             data = resp.json()
         except ValueError:
+            logger.error("[TG] %s: JSON bo'lmagan javob (HTTP %s)", method, resp.status_code)
             return None
+        if isinstance(data, dict) and not data.get('ok'):
+            # Token URL'da bo'lgani uchun uni HECH QACHON yozmaymiz — faqat metod, chat va sabab.
+            logger.error("[TG] %s XATO: %s (chat_id=%s)", method, data.get('description'),
+                         (params or {}).get('chat_id', (params or {}).get('user_id', '-')))
         return _to_namespace(data)

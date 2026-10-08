@@ -17,6 +17,7 @@ Ishlash prinsipi:
 """
 import json
 import os
+import time
 import logging
 import requests
 
@@ -30,6 +31,7 @@ class ChannelStore:
     _tables: dict = {}       # jadval_nomi -> qatorlar ro'yxati (xotirada)
     _index: dict = {}        # {'tables': {'users': {'message_id':.., 'file_id':..}, ...}, 'index_message_id': ..}
     _index_loaded: bool = False
+    _disabled_until: float = 0.0   # kanal yetib bo'lmasa — shu vaqtgacha qayta urinmaymiz
 
     # ---------------------------------------------------------------------
     @classmethod
@@ -47,6 +49,8 @@ class ChannelStore:
     # ---------------------------------------------------------------------
     @classmethod
     def _tg_call(cls, method: str, params: dict = None, files: dict = None):
+        if time.time() < cls._disabled_until:
+            return None
         params = params or {}
         files_ = None
         url = f"https://api.telegram.org/bot{cls._bot_token}/{method}"
@@ -70,7 +74,16 @@ class ChannelStore:
             return None
 
         if not isinstance(data, dict) or not data.get('ok'):
-            logger.error("[ChannelStore] tgCall(%s) xato: %s", method, resp.text)
+            desc = str((data or {}).get('description', '')) if isinstance(data, dict) else ''
+            low = desc.lower()
+            if any(x in low for x in ('chat not found', 'not a member', 'not enough rights', 'forbidden', 'kicked')):
+                cls._disabled_until = time.time() + 300
+                logger.error(
+                    "⛔ DB KANALIGA ULANIB BO'LMADI (%s). Sabab: bot kanalda ADMIN emas yoki DB_CHANNEL_ID (%s) noto'g'ri, "
+                    "yoki BOT_TOKEN kanalga qo'shilmagan botniki. Ma'lumotlar hozircha FAQAT lokal diskda — "
+                    "server qayta ishga tushsa YO'QOLADI. 5 daqiqadan keyin qayta uriniladi.", desc, cls._channel_id)
+            else:
+                logger.error("[ChannelStore] tgCall(%s) xato: %s", method, resp.text)
             return None
         return data.get('result')
 

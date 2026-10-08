@@ -4,6 +4,8 @@ Flask orqali ishlaydi: POST /index.php (yoki /) ga Telegram webhook yuboradi.
 """
 import os
 import re
+import threading
+import collections
 import json
 import logging
 from datetime import datetime
@@ -18,6 +20,9 @@ from config.channel_sql import (
     cdb_real_escape_string, cdb_affected_rows,
 )
 from telegram_bot import Begzod, tg_from
+from handlers import handle_callback
+import orders
+import diagnostics
 from config.username_info import chekusername, chekPremiumUsername
 
 logging.basicConfig(level=logging.INFO)
@@ -90,7 +95,7 @@ def clear_purchase_steps(user_id) -> None:
     for suffix in (
         '.step', '_quantity.txt', '_month.txt', '_custom_emoji.txt', '_emoji.txt',
         '_gift_id.txt', '_uzs_price.txt', '_uzs_summasi.txt', '_quantity_ton.txt',
-        '.amount', '.username', '.txt',
+        '.amount', '.username', '.txt', '.order',
     ):
         remove_step(f"{user_id}{suffix}")
 
@@ -430,8 +435,8 @@ def register_with_referral(bot: Begzod, from_id, first_name: str, username: str,
 
         cdb_query(connect, f"""INSERT INTO users SET
 user_id='{from_id}',
-first_name='{first_name}',
-username='{username}',
+first_name='{cdb_real_escape_string(connect, first_name)}',
+username='{cdb_real_escape_string(connect, username)}',
 ref_id='{user_ref_id}',
 user_ref_id='{pas}',
 captcha='{captcha}',
@@ -474,8 +479,8 @@ def silent_register_if_new(from_id, first_name: str, username: str) -> None:
         sana = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         cdb_query(connect, f"""INSERT INTO users SET
 user_id='{from_id}',
-first_name='{first_name}',
-username='{username}',
+first_name='{cdb_real_escape_string(connect, first_name)}',
+username='{cdb_real_escape_string(connect, username)}',
 user_ref_id='{pas}',
 captcha_required='0',
 captcha_passed='1',
@@ -489,13 +494,35 @@ sana='{sana}'
 # WEBHOOK — asosiy kirish nuqtasi (index.php ning tanasi)
 # ===================================================================
 
+_SEEN_UPDATES = collections.deque(maxlen=2000)
+_SEEN_LOCK = threading.Lock()
+
+
+def _is_duplicate_update(update) -> bool:
+    """Telegram sekin javobda update'ni qayta yuboradi — pul bilan ishlaganda ikki marta bajarmaslik uchun."""
+    uid = getattr(update, 'update_id', None)
+    if uid is None:
+        return False
+    with _SEEN_LOCK:
+        if uid in _SEEN_UPDATES:
+            return True
+        _SEEN_UPDATES.append(uid)
+        return False
+
+
+@app.route('/', methods=['GET', 'HEAD'])
+def health():
+    """Render health-check uchun (405 xatosini oldini oladi)."""
+    return 'SoraPayBot ishlayapti', 200
+
+
 @app.route('/index.php', methods=['POST'])
 @app.route('/', methods=['POST'])
 def webhook():
     raw = request.get_data()
     bot = Begzod(raw)
     update = bot.update()
-    if update is None:
+    if update is None or _is_duplicate_update(update):
         return 'ok'
 
     # Webhookni har safar qayta o'rnatish (PHP original bilan bir xil xatti-harakat)
@@ -565,7 +592,8 @@ def webhook():
 
     # --- check_obuna callback ---
     if data_val == 'check_obuna':
-        check_obuna_status(from_id, bot, True, first_name or '')
+        if check_obuna_status(from_id, bot, True, first_name or ''):
+            bot.answerCallbackQuery({'callback_query_id': cq.id})
 
     # --- chat_join_request (majburiy kanalga so'rov yuborib qo'shilish) ---
     chat_join_request = getattr(update, 'chat_join_request', None)
@@ -592,11 +620,23 @@ def webhook():
     if chat_type == 'private':
         silent_register_if_new(from_id, first_name or '', username or '')
 
-    # TODO: keyingi bosqich — xarid oqimlari (Stars/Premium/Gift/TON),
-    # captcha tekshiruvi, referal/profil/statistika, admin.php integratsiyasi
-    # shu yerga ulanadi (handlers_*.py modullaridan).
+    # --- inline tugmalar (menyu, captcha, profil, referal, statistika, xaridlar) ---
+    if cq is not None and data_val != 'check_obuna':
+        handle_callback(bot, cq, connect, send_main_menu, majburiy)
+        return 'ok'
+
+    # --- matnli xabarlar va chek rasmlari (xarid oqimlari: Stars/Premium/Gift/TON) ---
+    if msg is not None and chat_type == 'private' and not (text or '').startswith('/start'):
+        try:
+            orders.handle_message(bot, msg, connect, send_main_menu)
+        except Exception:
+            logger.exception("Xabarni qayta ishlashda xato (user=%s)", from_id)
 
     return 'ok'
+
+
+# Server ishga tushganda fon oqimida yengil tashxis (natija logda: [STARTUP] ...)
+diagnostics.log_startup(connect)
 
 
 if __name__ == '__main__':
