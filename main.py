@@ -20,8 +20,6 @@ from config.channel_sql import (
     cdb_real_escape_string, cdb_affected_rows,
 )
 from telegram_bot import Begzod, tg_from
-from handlers import handle_callback
-import orders
 from config.username_info import chekusername, chekPremiumUsername
 
 logging.basicConfig(level=logging.INFO)
@@ -613,17 +611,9 @@ def webhook():
     if chat_type == 'private':
         silent_register_if_new(from_id, first_name or '', username or '')
 
-    # --- inline tugmalar (menyu, captcha, profil, referal, statistika, xaridlar) ---
-    if cq is not None and data_val != 'check_obuna':
-        handle_callback(bot, cq, connect, send_main_menu, majburiy)
-        return 'ok'
-
-    # --- matnli xabarlar va chek rasmlari (xarid oqimlari: Stars/Premium/Gift/TON) ---
-    if msg is not None and chat_type == 'private' and not (text or '').startswith('/start'):
-        try:
-            orders.handle_message(bot, msg, connect, send_main_menu)
-        except Exception:
-            logger.exception("Xabarni qayta ishlashda xato (user=%s)", from_id)
+    # TODO: keyingi bosqich — xarid oqimlari (Stars/Premium/Gift/TON),
+    # captcha tekshiruvi, referal/profil/statistika, admin.php integratsiyasi
+    # shu yerga ulanadi (handlers_*.py modullaridan).
 
     return 'ok'
 
