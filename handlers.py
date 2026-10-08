@@ -12,14 +12,7 @@ import json
 import logging
 
 from telegram_bot import tg_from
-<<<<<<< HEAD
 import orders
-=======
-<<<<<<< HEAD
-import orders
-=======
->>>>>>> 8023c4adf49734abcd89abb10aec310e4fe50bf5
->>>>>>> 396de28125b901daa7a9b9d4c7dad52d1eeab4c7
 from config.channel_sql import (
     cdb_prepare, cdb_stmt_bind_param, cdb_stmt_execute, cdb_stmt_get_result,
     cdb_stmt_close, cdb_fetch_assoc, cdb_num_rows,
@@ -167,31 +160,8 @@ def handle_captcha(bot, cq, connect, chat_id, message_id, majburiy):
     majburiy(user_id, bot, False, getattr(tg_from(cq), 'first_name', '') or '')
 
 
-<<<<<<< HEAD
 # ------------------------------------------------------------------ router
 
-=======
-<<<<<<< HEAD
-# ------------------------------------------------------------------ router
-
-=======
-def not_ready(bot, cq, name):
-    logger.info("Hali yozilmagan bo'lim bosildi: %s (user=%s)", name, tg_from(cq).id)
-    _answer(bot, cq, f"🛠 «{name}» bo'limi hali tayyor emas. Tez orada ishga tushadi!", True)
-
-
-# ------------------------------------------------------------------ router
-
-NOT_READY_TITLES = {
-    'buy_stars': "Stars olish",
-    'buy_premium': "Premium olish",
-    'buy_gift': "Gift olish",
-    'buy_ton': "Ton olish",
-}
-
-
->>>>>>> 8023c4adf49734abcd89abb10aec310e4fe50bf5
->>>>>>> 396de28125b901daa7a9b9d4c7dad52d1eeab4c7
 def handle_callback(bot, cq, connect, send_main_menu, majburiy) -> None:
     data = cq.data or ''
     msg = getattr(cq, 'message', None)
@@ -216,37 +186,14 @@ def handle_callback(bot, cq, connect, send_main_menu, majburiy) -> None:
             show_referral(bot, cq, connect, chat_id, message_id)
         elif data.startswith('captcha_'):
             handle_captcha(bot, cq, connect, chat_id, message_id, majburiy)
-<<<<<<< HEAD
         elif orders.handle_order_callback(bot, cq, connect, send_main_menu):
             pass   # buy_*, stars_*, prem_*, ton_*, gift_*, ord_*, adm_*
-=======
-<<<<<<< HEAD
-        elif orders.handle_order_callback(bot, cq, connect, send_main_menu):
-            pass   # buy_*, stars_*, prem_*, ton_*, gift_*, ord_*, adm_*
-=======
-        elif data in NOT_READY_TITLES:
-            not_ready(bot, cq, NOT_READY_TITLES[data])
->>>>>>> 8023c4adf49734abcd89abb10aec310e4fe50bf5
->>>>>>> 396de28125b901daa7a9b9d4c7dad52d1eeab4c7
         else:
             logger.warning("Noma'lum callback_data: %r", data)
             _answer(bot, cq)
     except Exception:
         logger.exception("Callback handlerda xato (data=%r)", data)
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
->>>>>>> 396de28125b901daa7a9b9d4c7dad52d1eeab4c7
         try:
             _answer(bot, cq, "Xatolik yuz berdi, birozdan so'ng qayta urinib ko'ring.", True)
         except Exception:
             pass
-<<<<<<< HEAD
-=======
-=======
-        try:    
-            _answer(bot, cq, "Xatolik yuz berdi, birozdan so'ng qayta urinib ko'ring.", True)
-        except Exception:
-            pass
->>>>>>> 8023c4adf49734abcd89abb10aec310e4fe50bf5
->>>>>>> 396de28125b901daa7a9b9d4c7dad52d1eeab4c7
