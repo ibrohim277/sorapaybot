@@ -36,8 +36,8 @@ TON_MIN, TON_MAX = 1, 100
 WALLET_RESERVE_TON = 0.1
 
 # --- To'lov rekvizitlari (bo'sh bo'lsa — adminning /karta buyrug'i ishlatiladi)
-CARD_NUMBER = ''
-CARD_OWNER = ''
+CARD_NUMBER = '5614 6835 1653 0409'
+CARD_OWNER = 'Xamidullayeva mafirat'
 
 # --- TON kursini avtomatik olish ---------------------------------------------
 _CACHE = {'t': 0.0, 'v': None}
