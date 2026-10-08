@@ -3,24 +3,45 @@
 Telegram Stars / Premium / Gift / TON sotib olish boti.
 Asl loyiha PHP'da yozilgan edi; bu — Python/Flask'ga o'tkazilgan versiyasi.
 
-## ⚠️ Hozirgi holat (muhim!)
+## Hozirgi holat
 
-Bu loyiha **hali to'liq tugallanmagan**. Quyidagilar yozildi va **real test
-qilindi** (Flask test client orqali, soxta Telegram update'lar bilan):
+Ishlaydi (soxta Telegram update'lar bilan 55 ta tekshiruvdan o'tgan):
 
-- ✅ `config/channel_db.py` + `channel_sql.py` + `channel_pdo.py` — ChannelDB
-  dvigateli (Telegram kanalni "baza" sifatida ishlatish). Asl PHP versiyasida
-  topilgan barcha bug'lar (LIMIT ishlamasligi, `WHERE 1=1` doim yolg'on
-  chiqishi, `INSERT ... SET` tushunilmasligi) shu yerda tuzatilgan.
-- ✅ `telegram_bot.py` — Telegram Bot API umumiy wrapper.
-- ✅ `main.py` — webhook, majburiy obuna tekshiruvi, oddiy va referal+captcha
-  orqali ro'yxatdan o'tish.
-- ✅ `BuyTon/`, `BuyStars/` — TON yuborish va Fragment.com orqali Stars/Premium
-  sotib olish skriptlari (asl kod ham Python edi, ko'chirildi).
+- ✅ Majburiy obuna, ro'yxatdan o'tish, referal + captcha
+- ✅ **Stars / Premium / TON / Gift xaridi** (`orders.py`)
+- ✅ Profilim, Statistikam, Referal bo'limlari (`handlers.py`)
+- ✅ Admin buyruqlari: `/karta`, `/kurs`, `/narx`, `/buyurtmalar`
 
-**Hali yozilmagan:** bot ichidagi Stars/Premium/Gift/TON xarid **suhbat
-oqimi** (tugmalar bosilganda), captcha tekshirish handleri, referal/profil/
-statistika bo'limlari, admin panel, TON to'lov webhook'i, mini-app API.
+**Hali yozilmagan:** admin panel, Payme avtomatik to'lovi (hozir karta + chek),
+TON to'lov webhook'i, mini-app API.
+
+## Xarid qanday ishlaydi
+
+1. Mijoz xizmat va miqdorni tanlaydi, qabul qiluvchini kiritadi (@username / TON hamyon / ID).
+2. Bot narxni ko'rsatadi, mijoz tasdiqlaydi → buyurtma `#N` yaratiladi.
+3. Mijoz kartaga to'laydi va **chek rasmini** botga yuboradi.
+4. Chek **adminga** (`ADMIN_ID`) ✅/❌ tugmalari bilan boradi.
+5. Admin ✅ bossa, buyurtma **fonda avtomatik bajariladi**:
+   - Stars / Premium → Fragment.com orqali (`BuyStars/`)
+   - TON → hamyondan yuborish (`BuyTon/`)
+   - Gift → Bot API `sendGift` (botning o'z **Stars balansidan**)
+6. Natija mijozga va adminga xabar qilinadi. Xato bo'lsa, adminda 🔁 «Qayta urinish» tugmasi chiqadi.
+
+Admin o'zi uchun xarid qilsa, to'lov/chek so'ralmaydi — to'g'ridan-to'g'ri hamyondan bajariladi.
+
+### Ishga tushirishdan oldin
+
+1. `config/settings.py`: `BOT_TOKEN` va `MNEMONIC` (hamyonda yetarli TON bo'lsin).
+2. Admin bir marta botga `/start` bossin (aks holda bot adminga xabar yubora olmaydi).
+3. Botda admin sifatida: `/karta 8600123412341234 Ism Familiya`
+4. Narxlarni tekshiring: `/narx` (formulalar va marja — `config/pricing.py`).
+5. Gift sotmoqchi bo'lsangiz — botning Stars balansini to'ldiring (BotFather → Bot Settings).
+
+Admin buyruqlari: `/karta` (to'lov kartasi), `/kurs 31500` yoki `/kurs auto` (TON kursi),
+`/narx` (joriy narxlar), `/buyurtmalar` (oxirgi 10 ta buyurtma va holatlari).
+
+> ⚠️ Gunicorn **bitta worker** (`--workers 1 --threads 8`) bilan ishlashi shart: baza jadvallari
+> jarayon xotirasida keshlanadi, ikki worker bo'lsa buyurtmalar bir-birini ko'rmay qoladi.
 
 ## ⚠️ Sozlamalar haqida — MUHIM
 
@@ -58,8 +79,11 @@ config/
   channel_sql.py       — mini SQL-parser (SELECT/INSERT/UPDATE/DELETE)
   channel_pdo.py       — admin panel uchun PDO-ga o'xshash qatlam
   username_info.py     — Fragment.com orqali username tekshirish
+  pricing.py           — narxlar, marja, miqdor chegaralari, TON kursi
 telegram_bot.py         — Telegram Bot API umumiy wrapper
 main.py                  — Flask webhook (asosiy bot handleri)
+handlers.py              — inline tugmalar router (menyu, captcha, profil, referal, statistika)
+orders.py                — Stars/Premium/Gift/TON xarid oqimlari, to'lov, admin tasdig'i
 BuyTon/main.py           — TON yuborish (tonutils)
 BuyStars/                — Fragment.com orqali Stars/Premium sotib olish
 requirements.txt, Procfile, render.yaml, runtime.txt — deploy fayllari
@@ -97,7 +121,7 @@ gunicorn main:app --bind 0.0.0.0:8080
 
 1. Render Dashboard → **New** → **Web Service** → shu repo'ni tanlang.
 2. **Build Command:** `pip install -r requirements.txt`
-3. **Start Command:** `gunicorn main:app --bind 0.0.0.0:$PORT --workers 2 --timeout 60`
+3. **Start Command:** `gunicorn main:app --bind 0.0.0.0:$PORT --workers 1 --threads 8 --timeout 120`
 4. Deploy qiling (environment variable kerak emas).
 
 ### Webhookni o'rnatish
