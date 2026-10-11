@@ -104,9 +104,15 @@ def _run_checks(bot: Begzod, connect=None, full: bool = True):
     # --- 6. Hamyon ---
     if words in (12, 24):
         try:
-            from orders import _wallet_balance_ton
-            bal = _wallet_balance_ton()
-            add(bal >= 1, f"Hamyon balansi: {bal:.2f} TON" + ("" if bal >= 1 else " — juda kam, to'ldiring"))
+            from orders import _wallet_info
+            addr, bal = _wallet_info()
+            if bal is None:
+                add(False, f"Hamyon hali FAOLLASHTIRILMAGAN (blokcheynda hisob yo'q, unga hech qachon TON tushmagan). "
+                           f"Shu manzilga TON yuboring: <code>{_h(addr)}</code>")
+            elif bal < 1:
+                add(False, f"Hamyon {_h(addr)}: {bal:.2f} TON — juda kam, to'ldiring")
+            else:
+                add(True, f"Hamyon {_h(addr)}: {bal:.2f} TON")
         except Exception as e:
             add(False, f"Hamyonga ulanib bo'lmadi: {_h(type(e).__name__)}: {_h(e)}")
 

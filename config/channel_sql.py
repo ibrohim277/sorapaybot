@@ -377,21 +377,48 @@ def cdb_compute_aggregates(select_clause: str, rows: list) -> dict:
 
 
 def cdb_split_top_level_commas(s: str) -> list:
+    """Vergul bo'yicha ajratadi, lekin TIRNOQ ichidagi vergul/qavslarga tegmaydi.
+    (Avval faqat qavslar hisoblangan edi: `note = 'a, b'` qiymati vergulda kesilib yo'qolardi.)
+    Tirnoq ichida \\' va \\\\ (cdb_real_escape_string) hamda '' ekranlashlari tushuniladi."""
     parts = []
     depth = 0
-    current = ''
-    for ch in s:
-        if ch == '(':
+    cur = []
+    quote = None
+    i, n = 0, len(s)
+    while i < n:
+        ch = s[i]
+        if quote:
+            cur.append(ch)
+            if ch == '\\' and i + 1 < n:          # \' yoki \\ — keyingi belgi ekranlangan
+                cur.append(s[i + 1])
+                i += 2
+                continue
+            if ch == quote:
+                if i + 1 < n and s[i + 1] == quote:  # '' — ekranlangan tirnoq
+                    cur.append(s[i + 1])
+                    i += 2
+                    continue
+                quote = None
+            i += 1
+            continue
+        if ch in ("'", '"'):
+            quote = ch
+            cur.append(ch)
+        elif ch == '(':
             depth += 1
+            cur.append(ch)
         elif ch == ')':
             depth -= 1
-        if ch == ',' and depth == 0:
-            parts.append(current)
-            current = ''
+            cur.append(ch)
+        elif ch == ',' and depth == 0:
+            parts.append(''.join(cur))
+            cur = []
         else:
-            current += ch
-    if current.strip() != '':
-        parts.append(current)
+            cur.append(ch)
+        i += 1
+    tail = ''.join(cur)
+    if tail.strip() != '':
+        parts.append(tail)
     return parts
 
 

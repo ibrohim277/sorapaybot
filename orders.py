@@ -23,6 +23,7 @@ import json
 import asyncio
 import logging
 import threading
+import time
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 
@@ -250,17 +251,58 @@ def _card(connect):
 
 # =============================================================== TON / hamyon (lazy import)
 
-def _wallet_balance_ton() -> float:
+class WalletNotFunded(Exception):
+    """Bot hamyoni blokcheynda hali mavjud emas (unga hech qachon TON tushmagan) — tonapi 404 'entity not found'."""
+    def __init__(self, address: str):
+        self.address = address
+        super().__init__(f"Hamyon hali faollashtirilmagan: {address}")
+
+
+def _is_not_found(e: Exception) -> bool:
+    msg = str(e).lower()
+    return getattr(e, 'status', None) == 404 or 'entity not found' in msg or 'http 404' in msg
+
+
+def _wallet_info():
+    """(manzil, balans_TON | None). None — hisob blokcheynda yo'q (hamyon hali TON olmagan)."""
     from tonutils.client import TonapiClient
     from tonutils.wallet import WalletV4R2
 
     async def _b():
         client = TonapiClient(api_key=settings.API_TON, is_testnet=False)
         wallet, _, _, _ = WalletV4R2.from_mnemonic(client, settings.MNEMONIC_LIST)
-        nano = await client.get_account_balance(wallet.address.to_str(is_bounceable=False))
-        return nano / 1_000_000_000
+        addr = wallet.address.to_str(is_bounceable=False)
+        try:
+            nano = await client.get_account_balance(addr)
+        except Exception as e:
+            if _is_not_found(e):
+                return addr, None
+            raise
+        return addr, nano / 1_000_000_000
 
     return asyncio.run(_b())
+
+
+def _wallet_balance_ton() -> float:
+    addr, bal = _wallet_info()
+    if bal is None:
+        raise WalletNotFunded(addr)
+    return bal
+
+
+_LAST_ALERT = {}
+
+
+def _alert_admin(bot, key: str, text: str, every: int = 600) -> None:
+    """Adminga ogohlantirishni 10 daqiqada ko'pi bilan bir marta yuboradi (spam bo'lmasin)."""
+    now = time.time()
+    if now - _LAST_ALERT.get(key, 0) < every:
+        return
+    _LAST_ALERT[key] = now
+    try:
+        _send(bot, settings.ADMIN_ID, text)
+    except Exception:
+        logger.exception("Adminga ogohlantirish yuborib bo'lmadi")
 
 
 def _run_buy(action, query, amount) -> bool:
@@ -449,7 +491,17 @@ def _stock_check(ctx: Ctx, d: dict):
         need = P.required_ton(d['kind'], d['qty']) + P.WALLET_RESERVE_TON
         bal = _wallet_balance_ton()
         if bal < need:
+            _alert_admin(ctx.bot, 'wallet_low', f"⚠️ Bot hamyonida TON yetarli emas: bor {bal:.2f}, kerak ~{need:.2f}. Mijoz xarid qila olmadi — hamyonni to'ldiring.")
+            if _is_admin(ctx.uid):
+                return False, f"Hamyonda TON yetarli emas: bor {bal:.2f}, kerak ~{need:.2f}."
             return False, "Hozircha bu miqdorni berib bo'lmaydi (zaxira yetarli emas). Kichikroq miqdorni tanlang yoki keyinroq urining."
+    except WalletNotFunded as e:
+        _alert_admin(ctx.bot, 'wallet_empty',
+                     "⚠️ Bot hamyoni hali faollashtirilmagan (TON yo'q) — mijozlar xarid qila olmayapti.\n"
+                     f"Shu manzilga TON yuboring:\n<code>{e.address}</code>")
+        if _is_admin(ctx.uid):
+            return False, f"Hamyon bo'sh. TON yuboring: {e.address}"
+        return False, "Hozircha bu xizmat vaqtincha mavjud emas (zaxira tugagan). Keyinroq urinib ko'ring."
     except Exception as e:
         logger.warning("Zaxira tekshiruvi bajarilmadi: %s", e)
     return True, ''
@@ -707,7 +759,11 @@ def _do_fulfill(o: dict, bot):
     if not settings.MNEMONIC_LIST:
         return False, "config/settings.py da MNEMONIC bo'sh — hamyon sozlanmagan."
     need = P.required_ton(kind, qty) + P.WALLET_RESERVE_TON
-    bal = _wallet_balance_ton()
+    try:
+        bal = _wallet_balance_ton()
+    except WalletNotFunded as e:
+        return False, (f"Bot hamyoni hali faollashtirilmagan (unga TON tushmagan). Shu manzilga kamida {need:.2f} TON yuboring, "
+                       f"so'ng «Qayta urinish»: {e.address}")
     if bal < need:
         return False, f"Hamyonda TON yetarli emas (bor {bal:.2f}, kerak ~{need:.2f})."
 
