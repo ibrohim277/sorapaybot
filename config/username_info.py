@@ -1,17 +1,17 @@
 """
 Username tekshiruvi (Stars / Premium uchun).
 
-Eski kod Fragment'ga FRAGMENT_HASH + STEL_* cookie'lari bilan tayanardi. Bular boshqa odamning
-sessiyasidan qolgan va tez eskiradi — shu sabab tekshiruv ishlamay qolgan. Endi:
+Muammo: Fragment ba'zan MAVJUD username uchun ham «topilmadi» deydi (eskirgan/begona STEL_* cookie'lar,
+hash'ning sessiyaga mos kelmasligi). Shuning uchun uning «yo'q» javobiga to'liq ishonib bo'lmaydi.
 
-  1) Fragment `hash` ni sahifaning o'zidan avtomatik oladi (10 daqiqa keshlanadi),
-     olinmasa settings.FRAGMENT_HASH ga qaytadi;
-  2) Fragment javobi tushunarsiz/xato bo'lsa (hash/cookie eskirgan, sayt javob bermadi) —
-     username'ni Telegram'ning ochiq t.me sahifasi orqali tekshiradi;
-  3) Faqat IKKALASI ham ishlamasa {'error': ...} qaytaradi.
-
-Fragment/t.me javobining haqiqiy ko'rinishini bu yerda sinab bo'lmadi (internet yo'q) — shuning uchun
-barcha qadamlar himoyalangan va sabablar logga yoziladi ([Fragment] ...). `/diag` ham ko'rsatadi.
+Tekshiruv tartibi:
+  1) Fragment — ANONIM sessiya bilan (cookie'siz; hash va cookie sahifaning o'zidan olinadi),
+  2) Fragment — settings'dagi cookie'lar + dinamik hash,  3) Fragment — settings.FRAGMENT_HASH (statik);
+     birortasi «topildi» desa — tamom.
+  4) Fragment «topildi» demasa (yoki ishlamasa) — Telegram'ning ochiq t.me sahifasi bilan SOLISHTIRILADI:
+       t.me «foydalanuvchi bor» desa -> ishoniladi (Fragment xato qilgan), ziddiyat logga yoziladi;
+       t.me ham «yo'q» desa -> «topilmadi».
+Har bir urinish natijasi `last_trail()` orqali ko'rinadi va /diag da chiqadi.
 """
 import re
 import time
@@ -74,6 +74,14 @@ def hash_source() -> str:
 
 
 # ------------------------------------------------------------------- Fragment
+_ANON = {'hash': None, 'cookies': None, 't': 0.0}
+_LAST = {}
+
+
+def last_trail(tag: str = 'stars') -> str:
+    return "; ".join(_LAST.get(tag, [])) or "hali tekshirilmagan"
+
+
 def _classify(data) -> str:
     """'found' | 'notfound' | 'bad' — Fragment javobi ishonchli talqin qilinadimi."""
     if not isinstance(data, dict):
@@ -89,39 +97,89 @@ def _classify(data) -> str:
     return 'bad'
 
 
-def _fragment_call(post_data: dict, referer: str):
-    """(data, None) yoki (None, xato_matni). data — ishonchli talqin qilingan javob."""
-    hashes = [get_hash()]
-    static = getattr(settings, 'FRAGMENT_HASH', '') or ''
-    if static and static not in hashes:
-        hashes.append(static)
-    headers = {
+def _headers(referer: str) -> dict:
+    return {
         "Accept": "application/json, text/javascript, */*; q=0.01",
         "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
         "Origin": "https://fragment.com", "Referer": referer,
         "User-Agent": UA, "X-Requested-With": "XMLHttpRequest",
     }
-    last = "noma'lum xato"
-    for h in hashes:
-        try:
-            resp = requests.post(f"https://fragment.com/api?hash={h}", data=post_data,
-                                 headers=headers, cookies=_cookies(), timeout=15)
-        except requests.RequestException as e:
-            last = f"so'rov xatosi: {type(e).__name__}"
-            continue
-        if resp.status_code != 200:
-            last = f"HTTP {resp.status_code}"
-            continue
-        try:
-            data = resp.json()
-        except ValueError:
-            last = "JSON emas (hash/cookie eskirgan bo'lishi mumkin)"
-            continue
-        if _classify(data) == 'bad':
-            last = f"tushunarsiz javob: {str(data)[:120]}"
-            continue
-        return data, None
-    return None, last
+
+
+def _post(h: str, post_data: dict, referer: str, cookies):
+    """(data, kind, xato) — kind: found/notfound/bad."""
+    try:
+        resp = requests.post(f"https://fragment.com/api?hash={h}", data=post_data,
+                             headers=_headers(referer), cookies=cookies, timeout=15)
+    except requests.RequestException as e:
+        return None, 'bad', f"so'rov xatosi: {type(e).__name__}"
+    if resp.status_code != 200:
+        return None, 'bad', f"HTTP {resp.status_code}"
+    try:
+        data = resp.json()
+    except ValueError:
+        return None, 'bad', "JSON emas (hash/cookie eskirgan bo'lishi mumkin)"
+    kind = _classify(data)
+    return data, kind, (None if kind == 'found' else f"javob: {str(data)[:140]}")
+
+
+def _anon_session():
+    """Cookie'siz sessiya: hash VA cookie'lar sahifaning o'zidan olinadi (10 daqiqa keshlanadi)."""
+    now = time.time()
+    with _LOCK:
+        if _ANON['hash'] and now - _ANON['t'] < _HASH_TTL:
+            return _ANON['hash'], _ANON['cookies']
+    g = requests.get("https://fragment.com/stars/buy",
+                     headers={'User-Agent': UA, 'Accept': 'text/html'}, timeout=15)
+    m = HASH_RE.search(getattr(g, 'text', '') or '')
+    if not m:
+        raise ValueError("sahifada hash topilmadi")
+    jar = getattr(g, 'cookies', None)
+    cookies = dict(jar) if jar is not None else {}
+    with _LOCK:
+        _ANON.update(hash=m.group(1), cookies=cookies, t=now)
+    return m.group(1), cookies
+
+
+def _fragment_call(post_data: dict, referer: str, tag: str = 'stars'):
+    """(data, None) — data 'found' yoki 'notfound' bo'lishi mumkin (_classify bilan ajratiladi);
+    hech biri ishonchli bo'lmasa (None, xato_matni)."""
+    trail, found, notfound = [], None, None
+
+    def consider(label, data, kind, err):
+        nonlocal found, notfound
+        trail.append(f"{label}: {kind}" + (f" ({err})" if err else ""))
+        if kind == 'found' and found is None:
+            found = data
+        elif kind == 'notfound' and notfound is None:
+            notfound = data
+
+    # 1) anonim sessiya
+    try:
+        h, ck = _anon_session()
+        consider("anonim", *_post(h, post_data, referer, ck))
+    except Exception as e:
+        trail.append(f"anonim: bad ({type(e).__name__}: {str(e)[:60]})")
+        h = None
+
+    # 2) settings cookie'lari + dinamik hash
+    h2 = None
+    if found is None:
+        h2 = get_hash()
+        if h2:
+            consider("cookie+dinamik", *_post(h2, post_data, referer, _cookies()))
+
+    # 3) statik hash
+    static = getattr(settings, 'FRAGMENT_HASH', '') or ''
+    if found is None and static and static not in (h, h2):
+        consider("cookie+statik", *_post(static, post_data, referer, _cookies()))
+
+    _LAST[tag] = trail
+    if found is not None:
+        return found, None
+    if notfound is not None:
+        return notfound, None
+    return None, trail[-1] if trail else "noma'lum xato"
 
 
 # ------------------------------------------------------------ Telegram (zaxira)
@@ -149,27 +207,43 @@ def _tme_check(username: str) -> dict:
 
 
 # ------------------------------------------------------------------ ochiq API
+def _cross_check(u: str, data, err, what: str) -> dict:
+    """Fragment «topildi» demagan holat: t.me bilan solishtirish (Fragment'ning «yo'q»iga ko'r-ko'rona ishonilmaydi)."""
+    fragment_nf = data is not None
+    if fragment_nf:
+        logger.warning("[Fragment] %s: «topilmadi» dedi (%s) — t.me bilan solishtiriladi. Urinishlar: %s",
+                       what, str(data)[:140], last_trail('stars'))
+    else:
+        logger.warning("[Fragment] %s: ishlamadi (%s) — t.me orqali tekshiriladi", what, err)
+    t = _tme_check(u)
+    if t.get('exists'):
+        if fragment_nf:
+            logger.warning("[Fragment] ZIDDIYAT: Fragment «topilmadi», t.me «mavjud» (@%s) -> t.me ishoniladi. "
+                           "Fragment sessiyasi (STEL_*/hash) eskirgan bo'lishi mumkin.", u)
+        return t
+    if 'error' in t and fragment_nf:
+        return {'exists': False, 'username': u, 'source': 'fragment',
+                'message': 'Username topilmadi yoki noto\u2018g\u2018ri'}
+    return t
+
+
 def chekusername(username: str) -> dict:
     """Stars uchun username mavjudligini tekshirish."""
     u = (username or '').lstrip('@').strip()
     data, err = _fragment_call({'query': u, 'method': 'searchStarsRecipient'},
-                               "https://fragment.com/stars/buy")
-    if data is not None:
-        found = data.get('found')
-        if isinstance(found, dict) and found.get('recipient'):
-            return {'exists': True, 'username': u, 'recipient': found['recipient'],
-                    'name': found.get('name', u), 'avatar': found.get('avatar'), 'source': 'fragment'}
-        return {'exists': False, 'username': u, 'source': 'fragment',
-                'message': 'Username topilmadi yoki noto\u2018g\u2018ri'}
-    logger.warning("[Fragment] searchStarsRecipient ishlamadi (%s) -> Telegram orqali tekshiriladi", err)
-    return _tme_check(u)
+                               "https://fragment.com/stars/buy", 'stars')
+    if data is not None and _classify(data) == 'found':
+        found = data['found']
+        return {'exists': True, 'username': u, 'recipient': found['recipient'],
+                'name': found.get('name', u), 'avatar': found.get('avatar'), 'source': 'fragment'}
+    return _cross_check(u, data, err, "searchStarsRecipient")
 
 
 def chekPremiumUsername(username: str, months: int = 12) -> dict:
     """Premium sovg'a qilish mumkinligini tekshirish (allaqachon Premium bo'lsa — has_premium)."""
     u = (username or '').lstrip('@').strip()
     data, err = _fragment_call({'query': u, 'months': int(months), 'method': 'searchPremiumGiftRecipient'},
-                               "https://fragment.com/premium/gift")
+                               "https://fragment.com/premium/gift", 'premium')
     if data is not None:
         e = data.get('error')
         if isinstance(e, str) and 'already subscribed' in e:
@@ -180,10 +254,7 @@ def chekPremiumUsername(username: str, months: int = 12) -> dict:
             return {'exists': True, 'has_premium': False, 'username': u, 'recipient': found['recipient'],
                     'name': found.get('name', u), 'avatar': found.get('avatar') or found.get('photo'),
                     'source': 'fragment', 'message': 'Premium sovg\u2018a qilish mumkin.'}
-        return {'exists': False, 'has_premium': False, 'username': u, 'source': 'fragment',
-                'message': e if isinstance(e, str) else 'Username topilmadi yoki Premium sovg\u2018a qilish imkoni yo\u2018q.'}
-    logger.warning("[Fragment] searchPremiumGiftRecipient ishlamadi (%s) -> Telegram orqali tekshiriladi", err)
-    r = _tme_check(u)
+    r = _cross_check(u, data, err, "searchPremiumGiftRecipient")
     if r.get('exists'):
         r['has_premium'] = False   # Premium holatini faqat Fragment biladi; buyurtma bajarilganda aniqlanadi
     return r

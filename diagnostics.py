@@ -115,9 +115,9 @@ def _run_checks(bot: Begzod, connect=None, full: bool = True):
         from config import username_info as UI
         r = UI.chekusername('durov')
         if r.get('exists') and r.get('source') == 'fragment':
-            add(True, f"Fragment ishlayapti (hash: {UI.hash_source()})")
+            add(True, f"Fragment ishlayapti — urinishlar: {_h(UI.last_trail('stars'))}")
         elif r.get('exists'):
-            add(False, "Fragment ishlamayapti — username tekshiruvi Telegram (t.me) zaxirasi orqali ishlayapti. "
+            add(False, f"Fragment ishlamayapti ({_h(UI.last_trail('stars'))}) — username tekshiruvi Telegram (t.me) zaxirasi orqali ishlayapti. "
                        "Stars/Premium XARIDI uchun baribir Fragment sessiyasi kerak: o'z hamyoningizni fragment.com ga ulab, "
                        "STEL_*/FRAGMENT_PUBLICKEY/FRAGMENT_WALLETS/FRAGMENT_ADDRES ni yangilang.")
         else:
