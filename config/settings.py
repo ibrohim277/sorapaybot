@@ -1,15 +1,30 @@
 """
 config/config.php ning Python porti.
-Barcha sozlamalar shu yerda hardcoded (repo private bo'lgani uchun).
 
-BOT_TOKEN va MNEMONIC asl kodda ham bo'sh edi — bular hech qayerda
-berilmagan, shu yerga o'zingiz to'ldirishingiz kerak.
+Maxfiy qiymatlar (token, kalitlar, mnemonic, cookie) KODDA SAQLANMAYDI —
+ular Render > Environment bo'limidan o'qiladi. Ochiq (maxfiy bo'lmagan) qiymatlar shu yerda.
+
+Render'da kerakli o'zgaruvchilar:
+  BOT_TOKEN, MNEMONIC, TONAPI_KEY, API_TON,
+  STEL_SSID, STEL_DT, STEL_TON_TOKEN, STEL_TOKEN
+  (ixtiyoriy: BASE_URL, FRAGMENT_HASH)
 """
 import os
+import re
+import logging
+
+logger = logging.getLogger("sorapay.settings")
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-BOT_TOKEN = '8708750764:AAHzooamiDcBmPnupRZaDv2L5itr2x70QKE'   # <-- BotFather'dan olingan tokenni shu yerga yozing
+
+def _env(name: str, default: str = '') -> str:
+    """Muhit o'zgaruvchisini o'qiydi; bo'sh joylarni va tasodifiy qo'shtirnoqlarni olib tashlaydi."""
+    return os.environ.get(name, default).strip().strip('"').strip("'")
+
+
+# --- Telegram bot ---
+BOT_TOKEN = _env('BOT_TOKEN')
 API_URL = f'https://api.telegram.org/bot{BOT_TOKEN}/'
 
 # --- ChannelDB sozlamalari (MySQL o'rniga) ---
@@ -18,35 +33,54 @@ DB_DATA_DIR = os.path.join(BASE_DIR, 'storage', 'db')
 
 ADMIN_ID = 8578660273
 LOG_CHANNEL_ID = -1003701137136
-TONAPI_KEY = 'AFW2F6U2WB65TTQAAAAJ4KI4EWHPC24JVW6LEMOMY4QVBXABCPSXRXSDEXZKNRPY2RIUVDY'   # tonapi.io kalitingiz (hali kodda ishlatilmayapti)
-BASE_URL = 'https://sorapaybot.onrender.com'   # Render servis nomi "sorapay" bo'lgani uchun odatda shu manzil bo'ladi.
-                                             # Agar Render boshqa manzil bersa (masalan "sorapay" band bo'lib chiqsa),
-                                             # shu yerni Render haqiqiy bergan URL bilan almashtirib qayta push qiling.
+TONAPI_KEY = _env('TONAPI_KEY')   # tonapi.io kaliti
 
-DEBUG = True
+# Render bergan haqiqiy manzil. Boshqacha bo'lsa, BASE_URL o'zgaruvchisi bilan almashtiring.
+BASE_URL = _env('BASE_URL', 'https://sorapaybot.onrender.com').rstrip('/')
+
+DEBUG = _env('DEBUG', '0').lower() in ('1', 'true', 'yes')   # productionda o'chiq
 
 STEP_DIR = os.path.join(BASE_DIR, 'step')
 os.makedirs(STEP_DIR, exist_ok=True)
 os.makedirs(DB_DATA_DIR, exist_ok=True)
 
 # --- TON yuborish (BuyTon/, BuyStars/) va Fragment.com integratsiyasi ---
-API_TON = "AH6VGUQHYLVXFGQAAAAE6E5OK5T4H7TF3DSHJCHSJ4XNUTEIXPXQAYSSPI4ZLUERNDXWDVI"
-MNEMONIC = os.environ.get('MNEMONIC', '')   # <-- hamyon 24 so'zlik maxfiy iborasi, probel bilan ajratib yozing (asl kodda ham bo'sh edi)
-MNEMONIC_LIST = MNEMONIC.split() if MNEMONIC else []
+API_TON = _env('API_TON')
 
-FRAGMENT_HASH = '03290a4624161419'
+# Hamyon maxfiy iborasi: probel, vergul yoki yangi qator bilan ajratilgan 12 yoki 24 so'z.
+MNEMONIC = _env('MNEMONIC')
+MNEMONIC_LIST = [w for w in re.split(r'[\s,;]+', MNEMONIC.lower()) if w]
+
+# Fragment — ochiq qiymatlar (fragment.com ga hamyon ulanganda olinadi)
+FRAGMENT_HASH = _env('FRAGMENT_HASH', '03290a4624161419')
 FRAGMENT_PUBLICKEY = 'bd9767479817f5587029a3c131fadedfd4bcad456ec66729a9bd078034fb234d'
 FRAGMENT_WALLETS = 'te6cckECFgEAAwQAAgE0ARUBFP8A9KQT9LzyyAsCAgEgAxACAUgEBwLm0AHQ0wMdIz0M='
 FRAGMENT_ADDRES = '0:c16230bea882a7dfc38c25734de1965d4651198718c130e32dabe0011352c'
 
-STEL_SSID = '547c9d2018b8804a79_422117814560415'
-STEL_DT = '-300'
-STEL_TON_TOKEN = '_gKZvwRyzR9bgBSETHYXG4qyooQQNnpj3S3CJSnsjdKKMK6CaM5wdeSRKbrIJPH7Fe5Laka3mMuNvWza6KCKCnBimcYvHRn-rAljca-XJkc5iyCj1edZISZ4Vx3Tk1vD9o_7hzipq8bQLrYhHPnWxsuS0W2VLt7E-0sSeYbJn-dz'
-STEL_TOKEN = 'ab85018e4ebeb5c9c24f50aac392dc25ab8561464ab850c59b5cd294560a40dd5b7724a'
+# Fragment sessiya cookie'lari — MAXFIY
+STEL_SSID = _env('STEL_SSID')
+STEL_DT = _env('STEL_DT', '-300')
+STEL_TON_TOKEN = _env('STEL_TON_TOKEN')
+STEL_TOKEN = _env('STEL_TOKEN')
 
-FRAGMENT_COOKIES = {
+# Bo'sh qiymatli cookie'lar yuborilmaydi
+FRAGMENT_COOKIES = {k: v for k, v in {
     'stel_ssid': STEL_SSID,
     'stel_dt': STEL_DT,
     'stel_ton_token': STEL_TON_TOKEN,
     'stel_token': STEL_TOKEN,
-}
+}.items() if v}
+
+
+# --- Ishga tushganda tekshiruv (qiymatlarning o'zini logga yozmaydi, faqat "bor/yo'q") ---
+def _startup_check():
+    missing = [n for n, v in (('BOT_TOKEN', BOT_TOKEN), ('MNEMONIC', MNEMONIC),
+                              ('TONAPI_KEY', TONAPI_KEY), ('API_TON', API_TON),
+                              ('STEL_SSID', STEL_SSID), ('STEL_TOKEN', STEL_TOKEN)) if not v]
+    if missing:
+        logger.error("Render Environment'da yetishmayapti: %s", ", ".join(missing))
+    if MNEMONIC and len(MNEMONIC_LIST) not in (12, 24):
+        logger.error("MNEMONIC %d ta so'zdan iborat — 12 yoki 24 bo'lishi kerak", len(MNEMONIC_LIST))
+
+
+_startup_check()
