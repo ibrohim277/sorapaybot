@@ -11,7 +11,7 @@ import logging
 from datetime import datetime
 from urllib.parse import urlencode
 
-from flask import Flask, request
+from flask import Flask, request, jsonify
 
 from config import settings
 from config.channel_sql import (
@@ -23,6 +23,7 @@ from telegram_bot import Begzod, tg_from
 from handlers import handle_callback
 import orders
 import diagnostics
+import payments
 from config.username_info import chekusername, chekPremiumUsername
 
 logging.basicConfig(level=logging.INFO)
@@ -508,6 +509,23 @@ def _is_duplicate_update(update) -> bool:
             return True
         _SEEN_UPDATES.append(uid)
         return False
+
+
+@app.route('/tolov/webhook', methods=['GET', 'POST'])
+def tolov_webhook():
+    """tolov.go to'lov xabarnomasi. Manzil maxfiy kalit (?secret=) bilan himoyalangan;
+    to'lov holati baribir gateway API'sidan qayta tekshiriladi."""
+    if not payments.enabled():
+        return jsonify(ok=False, error='disabled'), 404
+    if not payments.check_secret(request.args.get('secret', '')):
+        return jsonify(ok=False, error='forbidden'), 403
+    payload = request.get_json(silent=True) or request.form.to_dict() or request.args.to_dict()
+    payload.pop('secret', None)
+    try:
+        orders.process_gateway_webhook(connect, payload)
+    except Exception:
+        logger.exception("tolov webhook'ni qayta ishlashda xato")
+    return jsonify(ok=True)
 
 
 @app.route('/', methods=['GET', 'HEAD'])

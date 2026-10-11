@@ -75,13 +75,19 @@ def _run_checks(bot: Begzod, connect=None, full: bool = True):
     add(words in (12, 24), "MNEMONIC kiritilgan" + (f" ({words} so'z)" if words else "")
         if words in (12, 24) else "MNEMONIC bo'sh yoki noto'g'ri — Stars/Premium/TON bajarib bo'lmaydi (config/settings.py)")
     add(bool(settings.API_TON), "API_TON bor" if settings.API_TON else "API_TON bo'sh")
-    if connect is not None:
-        try:
-            from orders import _card
-            card, owner = _card(connect)
-            add(bool(card), f"To'lov kartasi: {_h(card)}" if card else "To'lov kartasi kiritilmagan — mijozlar to'lay olmaydi. Botda: /karta 8600123412341234 Ism Familiya")
-        except Exception as e:
-            add(False, f"Karta tekshirilmadi: {_h(e)}")
+    import payments
+    if payments.enabled():
+        add(True, "To'lov tizimi tolov.go ulangan — to'lovlar avtomatik (admin tasdig'isiz)")
+    else:
+        add(True, "ℹ️ tolov.go sozlanmagan (config/payment_settings.py) — karta + chek rejimi ishlaydi")
+        if connect is not None:
+            try:
+                from orders import _card
+                card, owner = _card(connect)
+                add(bool(card), f"To'lov kartasi: {_h(card)}" if card else
+                    "To'lov kartasi kiritilmagan — mijozlar to'lay olmaydi. Botda: /karta 8600123412341234 Ism Familiya")
+            except Exception as e:
+                add(False, f"Karta tekshirilmadi: {_h(e)}")
 
     if not full:
         return out
@@ -106,13 +112,16 @@ def _run_checks(bot: Begzod, connect=None, full: bool = True):
 
     # --- 7. Fragment (Stars/Premium uchun) ---
     try:
-        from config.username_info import chekusername
-        r = chekusername('durov')
-        if r.get('exists'):
-            add(True, "Fragment ishlayapti (cookie/hash yaroqli)")
+        from config import username_info as UI
+        r = UI.chekusername('durov')
+        if r.get('exists') and r.get('source') == 'fragment':
+            add(True, f"Fragment ishlayapti (hash: {UI.hash_source()})")
+        elif r.get('exists'):
+            add(False, "Fragment ishlamayapti — username tekshiruvi Telegram (t.me) zaxirasi orqali ishlayapti. "
+                       "Stars/Premium XARIDI uchun baribir Fragment sessiyasi kerak: o'z hamyoningizni fragment.com ga ulab, "
+                       "STEL_*/FRAGMENT_PUBLICKEY/FRAGMENT_WALLETS/FRAGMENT_ADDRES ni yangilang.")
         else:
-            add(False, f"Fragment javobi noto'g'ri: {_h(r.get('error') or r.get('message'))}. "
-                       "FRAGMENT_HASH va STEL_* cookie'lari eskirgan bo'lishi mumkin — Stars/Premium shu sababli ishlamaydi.")
+            add(False, f"Username tekshiruvi ishlamayapti: {_h(r.get('error') or r.get('message'))}")
     except Exception as e:
         add(False, f"Fragment tekshirilmadi: {_h(e)}")
 

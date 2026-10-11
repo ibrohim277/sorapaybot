@@ -31,7 +31,7 @@ os.makedirs(DB_DATA_DIR, exist_ok=True)
 
 # --- TON yuborish (BuyTon/, BuyStars/) va Fragment.com integratsiyasi ---
 API_TON = "AH6VGUQHYLVXFGQAAAAE6E5OK5T4H7TF3DSHJCHSJ4XNUTEIXPXQAYSSPI4ZLUERNDXWDVI"
-MNEMONIC = ''   # <-- hamyon 24 so'zlik maxfiy iborasi, probel bilan ajratib yozing (asl kodda ham bo'sh edi)
+MNEMONIC = os.environ.get('MNEMONIC', '')   # <-- hamyon 24 so'zlik maxfiy iborasi, probel bilan ajratib yozing (asl kodda ham bo'sh edi)
 MNEMONIC_LIST = MNEMONIC.split() if MNEMONIC else []
 
 FRAGMENT_HASH = '03290a4624161419'

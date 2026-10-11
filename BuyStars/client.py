@@ -3,10 +3,12 @@ BuyStars/client.py ning Python porti — Fragment.com orqali Stars/Premium
 sotib olish uchun so'rov zanjiri (recipient qidirish -> req_id olish ->
 to'lov havolasini olish).
 """
+import asyncio
 import logging
 import httpx
 
 from config import settings
+from config.username_info import get_api_url
 
 
 def get_cookies() -> dict:
@@ -14,7 +16,9 @@ def get_cookies() -> dict:
 
 
 class FragmentClient:
-    URL = f"https://fragment.com/api?hash={settings.FRAGMENT_HASH}"
+    async def _url(self) -> str:
+        """Hash sahifadan dinamik olinadi (eskirsa settings.FRAGMENT_HASH ga qaytadi)."""
+        return await asyncio.to_thread(get_api_url)
 
     async def fetch_recipient(self, query: str, amount, action: str):
         if action == "stars":
@@ -23,7 +27,7 @@ class FragmentClient:
             data = {"query": query, "months": amount, "method": "searchPremiumGiftRecipient"}
 
         async with httpx.AsyncClient() as client:
-            response = await client.post(self.URL, cookies=get_cookies(), data=data)
+            response = await client.post(await self._url(), cookies=get_cookies(), data=data)
             logging.info(response.json())
             return response.json().get("found", {}).get("recipient")
 
@@ -34,7 +38,7 @@ class FragmentClient:
             data = {"recipient": recipient, "months": amount, "method": "initGiftPremiumRequest"}
 
         async with httpx.AsyncClient() as client:
-            response = await client.post(self.URL, cookies=get_cookies(), data=data)
+            response = await client.post(await self._url(), cookies=get_cookies(), data=data)
             logging.info(response.json())
             return response.json().get("req_id")
 
@@ -70,7 +74,7 @@ class FragmentClient:
             "x-requested-with": "XMLHttpRequest",
         }
         async with httpx.AsyncClient() as client:
-            response = await client.post(self.URL, headers=headers, cookies=get_cookies(), data=data)
+            response = await client.post(await self._url(), headers=headers, cookies=get_cookies(), data=data)
             json_data = response.json()
             logging.info(json_data)
             if json_data.get("ok") and "transaction" in json_data:

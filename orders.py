@@ -28,6 +28,7 @@ from decimal import Decimal, InvalidOperation
 
 from config import settings
 from config import pricing as P
+import payments
 from config.channel_sql import (
     cdb_prepare, cdb_stmt_bind_param, cdb_stmt_execute, cdb_stmt_get_result,
     cdb_stmt_close, cdb_fetch_assoc, cdb_fetch_all, cdb_num_rows, cdb_insert_id,
@@ -414,6 +415,8 @@ def _validate_username(ctx: Ctx, d: dict, raw: str):
     if d['kind'] == 'premium':
         r = chekPremiumUsername(name, int(d['qty']))
         if r.get('error'):
+            if _is_admin(ctx.uid):
+                return True, '@' + name      # admin o'zi javobgar: tekshiruv ishlamasa ham davom etadi
             return False, "⚠️ Tekshirib bo'lmadi, birozdan so'ng qayta urinib ko'ring."
         if r.get('has_premium'):
             return False, "⚠️ Bu akkauntda allaqachon Telegram Premium bor."
@@ -422,9 +425,11 @@ def _validate_username(ctx: Ctx, d: dict, raw: str):
     else:
         r = chekusername(name)
         if r.get('error'):
+            if _is_admin(ctx.uid):
+                return True, '@' + name
             return False, "⚠️ Tekshirib bo'lmadi, birozdan so'ng qayta urinib ko'ring."
         if not r.get('exists'):
-            return False, "❌ Bunday foydalanuvchi topilmadi. Username'ni tekshirib qayta yuboring."
+            return False, "❌ " + (r.get('message') or "Bunday foydalanuvchi topilmadi.") + " Username'ni tekshirib qayta yuboring."
     return True, '@' + name
 
 
@@ -456,7 +461,7 @@ def confirm_order(ctx: Ctx):
         return _ans(ctx, "Seans tugagan. Iltimos, menyudan qaytadan boshlang.", True)
 
     card, owner = _card(ctx.connect)
-    if not card and not _is_admin(ctx.uid):
+    if not card and not _is_admin(ctx.uid) and not payments.enabled():
         _ans(ctx, "To'lov rekvizitlari hali sozlanmagan. Admin bilan bog'laning.", True)
         _send(ctx.bot, settings.ADMIN_ID,
               "⚠️ Foydalanuvchi buyurtma bermoqchi, lekin to'lov kartasi kiritilmagan.\n"
@@ -483,7 +488,7 @@ def confirm_order(ctx: Ctx):
             kind=d['kind'], qty=d.get('qty', ''), target=_safe_note(d['target'], 80),
             gift_id=d.get('gift_id', ''), gift_emoji=d.get('gift_emoji', ''),
             price_uzs=price, status='awaiting_payment', receipt_type='', receipt_file_id='',
-            note='', created=_now(), updated=_now(),
+            note='', invoice_id='', pay_url='', created=_now(), updated=_now(),
         )
         _draft_set(ctx.uid, {'order_id': oid})
         _step_set(ctx.uid, 'receipt')
@@ -499,6 +504,28 @@ def confirm_order(ctx: Ctx):
             _spawn_fulfillment(oid)
         return
 
+    if payments.enabled():
+        # tolov.go: avtomatik to'lov havolasi; to'lov kelishi bilan buyurtma admin tasdig'isiz bajariladi
+        try:
+            inv = payments.create_invoice(oid, price, f"Buyurtma #{oid}")
+        except Exception as e:
+            logger.exception("To'lov tizimida hisob yaratib bo'lmadi (#%s)", oid)
+            _claim(ctx.connect, oid, {'awaiting_payment'}, 'cancelled', note=_safe_note(f"gateway: {e}"))
+            _flow_clear(ctx.uid)
+            _send(ctx.bot, settings.ADMIN_ID, f"⚠️ To'lov tizimi xatosi (buyurtma #{oid}): <code>{_h(e)}</code>")
+            return _screen(ctx, "⚠️ To'lov tizimi vaqtincha ishlamayapti. Birozdan so'ng qayta urinib ko'ring.", [BACK_ROW])
+        _order_set(ctx.connect, oid, invoice_id=inv['invoice_id'], pay_url=_safe_note(inv['pay_url'], 500))
+        _flow_clear(ctx.uid)
+        text = (f"🧾 <b>Buyurtma #{oid}</b>\n\n{_describe(d)}\n\n"
+                f"💰 To'lov summasi: <b>{P.fmt(price)} so'm</b>\n\n"
+                "«💳 To'lash» tugmasini bosib to'lang. To'lov kelgach buyurtma avtomatik bajariladi; "
+                "xabar kelmasa «🔄 To'lovni tekshirish» ni bosing.")
+        return _screen(ctx, text, [
+            [{'text': "💳 To'lash", 'url': inv['pay_url']}],
+            [{'text': "🔄 To'lovni tekshirish", 'callback_data': f'ord_chk_{oid}'}],
+            [{'text': "❌ Buyurtmani bekor qilish", 'callback_data': f'ord_xcl_{oid}'}],
+        ])
+
     text = (f"🧾 <b>Buyurtma #{oid}</b>\n\n{_describe(d)}\n\n"
             f"💰 To'lov summasi: <b>{P.fmt(price)} so'm</b>\n\n"
             f"💳 Karta: <code>{_h(card)}</code>\n"
@@ -506,6 +533,54 @@ def confirm_order(ctx: Ctx):
             "\n❗️ Aynan shu summani o'tkazing, so'ng <b>to'lov chekini (skrinshot) rasm qilib shu yerga yuboring</b>. "
             "Admin tekshirgach, buyurtmangiz avtomatik bajariladi.")
     _screen(ctx, text, [[{'text': "❌ Buyurtmani bekor qilish", 'callback_data': f'ord_xcl_{oid}'}]])
+
+
+# =============================================================== tolov.go: to'lov kelganda
+
+def gateway_paid(bot, connect, oid) -> bool:
+    """To'lov tasdiqlangan buyurtmani ATOMIK 'processing' ga o'tkazib, fonda bajaradi. Takroriy chaqiruv xavfsiz."""
+    o = _claim(connect, oid, {'awaiting_payment'}, 'processing', note='tolov.go')
+    if not o:
+        return False
+    _CONNECT_REF['c'] = connect
+    _notify_user(bot, o['user_id'], f"✅ To'lov qabul qilindi! Buyurtma <b>#{oid}</b> bajarilmoqda...")
+    _send(bot, settings.ADMIN_ID, f"💳 #{oid} to'landi (tolov.go) — {P.fmt(o['price_uzs'])} so'm. Avtomatik bajarilmoqda.")
+    _spawn_fulfillment(oid)
+    return True
+
+
+def check_payment(ctx: Ctx, oid: int):
+    o = _order_get(ctx.connect, oid)
+    if not o or str(o['user_id']) != str(ctx.uid):
+        return _ans(ctx, "Buyurtma topilmadi.", True)
+    if str(o['status']) != 'awaiting_payment':
+        return _ans(ctx, "Bu buyurtma allaqachon qabul qilingan yoki yopilgan.", True)
+    if not o.get('invoice_id'):
+        return _ans(ctx, "Bu buyurtma uchun to'lov havolasi yo'q.", True)
+    try:
+        paid = payments.is_paid(o['invoice_id'])
+    except Exception as e:
+        logger.warning("To'lov holatini tekshirib bo'lmadi (#%s): %s", oid, e)
+        return _ans(ctx, "To'lov holatini hozir tekshirib bo'lmadi. Birozdan so'ng urinib ko'ring.", True)
+    if paid and gateway_paid(ctx.bot, ctx.connect, oid):
+        return _ans(ctx, "✅ To'lov topildi!")
+    _ans(ctx, "To'lov hali kelmadi. To'lagan bo'lsangiz, 1-2 daqiqa kutib qayta bosing.", True)
+
+
+def process_gateway_webhook(connect, payload: dict) -> bool:
+    """tolov.go webhook'i (main.py -> /tolov/webhook). Webhook'ga ISHONILMAYDI: holat API orqali qayta tekshiriladi."""
+    order_id, invoice_id = payments.extract_ids(payload)
+    o = None
+    if order_id and order_id.isdigit():
+        o = _order_get(connect, int(order_id))
+    if not o and invoice_id:
+        rows = _q_one(connect, "SELECT * FROM orders WHERE invoice_id = ?", invoice_id)
+        o = rows[0] if rows else None
+    if not o or str(o['status']) != 'awaiting_payment' or not o.get('invoice_id'):
+        return False
+    if not payments.is_paid(o['invoice_id']):
+        return False
+    return gateway_paid(Begzod(), connect, int(o['id']))
 
 
 # =============================================================== 4-bosqich: chek
@@ -754,6 +829,7 @@ _Q_RE = {
     'gift_g': re.compile(r'gift_g_(\d+)'),
     'adm': re.compile(r'adm_(ok|no|retry)_(\d+)'),
     'xcl': re.compile(r'ord_xcl_(\d+)'),
+    'chk': re.compile(r'ord_chk_(\d+)'),
 }
 
 
@@ -850,6 +926,8 @@ def handle_order_callback(bot, cq, connect, send_main_menu) -> bool:
         if ctx.message_id:
             bot.deleteMessage({'chat_id': ctx.chat_id, 'message_id': ctx.message_id})
         send_main_menu(bot, ctx.uid, ctx.first_name)
+    elif _Q_RE['chk'].fullmatch(data):
+        check_payment(ctx, int(_Q_RE['chk'].fullmatch(data).group(1)))
     elif _Q_RE['adm'].fullmatch(data):
         m = _Q_RE['adm'].fullmatch(data)
         admin_decide(ctx, m.group(1), int(m.group(2)))
