@@ -20,7 +20,7 @@ from config.channel_sql import (
 
 logger = logging.getLogger("sorapay.handlers")
 
-BACK_KB = {'inline_keyboard': [[{'text': "⬅️ Orqaga", 'callback_data': 'menu'}]]}
+BACK_KB = {'inline_keyboard': [[{'text': "⬅️ Orqaga", 'style': 'primary', 'callback_data': 'menu'}]]}
 
 _bot_username_cache = {'v': None}
 

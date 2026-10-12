@@ -81,8 +81,8 @@ def _grid(buttons, per_row=2):
     return [buttons[i:i + per_row] for i in range(0, len(buttons), per_row)]
 
 
-CANCEL_ROW = [{'text': "❌ Bekor qilish", 'callback_data': 'ord_cancel'}]
-BACK_ROW = [{'text': "⬅️ Orqaga", 'callback_data': 'menu'}]
+CANCEL_ROW = [{'text': "❌ Bekor qilish", 'style': 'danger', 'callback_data': 'ord_cancel'}]
+BACK_ROW = [{'text': "⬅️ Orqaga", 'style': 'primary', 'callback_data': 'menu'}]
 
 
 # =============================================================== step / qoralama (draft)
@@ -353,9 +353,9 @@ def _price(d: dict, rate: float) -> int:
 def start_stars(ctx: Ctx):
     _flow_clear(ctx.uid)
     rate = _rate(ctx.connect)
-    btns = [{'text': f"⭐️ {n} · {P.fmt(P.stars_price(n, rate))} so'm", 'callback_data': f'stars_q_{n}'}
+    btns = [{'text': f"⭐️ {n} · {P.fmt(P.stars_price(n, rate))} so'm", 'style': 'primary', 'callback_data': f'stars_q_{n}'}
             for n in P.STARS_PACKS]
-    rows = _grid(btns) + [[{'text': "✏️ Boshqa miqdor", 'callback_data': 'stars_q_custom'}], BACK_ROW]
+    rows = _grid(btns) + [[{'text': "✏️ Boshqa miqdor", 'style': 'primary', 'callback_data': 'stars_q_custom'}], BACK_ROW]
     _ans(ctx)
     _screen(ctx, "⭐️ <b>Telegram Stars</b>\n\nKerakli miqdorni tanlang yoki o'zingiz kiriting "
                  f"(min {P.STARS_MIN}, max {P.fmt(P.STARS_MAX)}):", rows)
@@ -364,7 +364,7 @@ def start_stars(ctx: Ctx):
 def start_premium(ctx: Ctx):
     _flow_clear(ctx.uid)
     rate = _rate(ctx.connect)
-    btns = [{'text': f"💎 {m} oy · {P.fmt(P.premium_price(m, rate))} so'm", 'callback_data': f'prem_m_{m}'}
+    btns = [{'text': f"💎 {m} oy · {P.fmt(P.premium_price(m, rate))} so'm", 'style': 'primary', 'callback_data': f'prem_m_{m}'}
             for m in sorted(P.PREMIUM_TON)]
     _ans(ctx)
     _screen(ctx, "💎 <b>Telegram Premium</b>\n\nMuddatni tanlang:", _grid(btns, 1) + [BACK_ROW])
@@ -373,9 +373,9 @@ def start_premium(ctx: Ctx):
 def start_ton(ctx: Ctx):
     _flow_clear(ctx.uid)
     rate = _rate(ctx.connect)
-    btns = [{'text': f"💎 {n} TON · {P.fmt(P.ton_price(n, rate))} so'm", 'callback_data': f'ton_q_{n}'}
+    btns = [{'text': f"💎 {n} TON · {P.fmt(P.ton_price(n, rate))} so'm", 'style': 'primary', 'callback_data': f'ton_q_{n}'}
             for n in P.TON_PACKS]
-    rows = _grid(btns) + [[{'text': "✏️ Boshqa miqdor", 'callback_data': 'ton_q_custom'}], BACK_ROW]
+    rows = _grid(btns) + [[{'text': "✏️ Boshqa miqdor", 'style': 'primary', 'callback_data': 'ton_q_custom'}], BACK_ROW]
     _ans(ctx)
     _screen(ctx, f"💎 <b>TON coin</b>\n\nMiqdorni tanlang yoki o'zingiz kiriting (min {P.TON_MIN}, max {P.TON_MAX}):", rows)
 
@@ -402,7 +402,7 @@ def start_gift(ctx: Ctx):
         return _ans(ctx, "Hozircha sovg'alar mavjud emas. Keyinroq urinib ko'ring.", True)
     rate = _rate(ctx.connect)
     btns = [{'text': f"{g['emoji']} {g['stars']}⭐️ · {P.fmt(P.stars_price(g['stars'], rate))}",
-             'callback_data': f"gift_g_{g['id']}"} for g in gifts]
+             'style': 'primary', 'callback_data': f"gift_g_{g['id']}"} for g in gifts]
     _ans(ctx)
     _screen(ctx, "🎁 <b>Telegram Gift</b>\n\nSovg'ani tanlang (narx so'mda):", _grid(btns) + [BACK_ROW])
 
@@ -417,7 +417,7 @@ def _ask_recipient(ctx: Ctx, d: dict):
         text = (f"{_describe_head(d)}\n\n👤 Kimga yuboramiz? Telegram <b>@username</b> kiriting "
                 "(masalan: <code>@durov</code>)")
         if ctx.username:
-            rows.append([{'text': "👤 O'zimga", 'callback_data': 'ord_me'}])
+            rows.append([{'text': "👤 O'zimga", 'style': 'primary', 'callback_data': 'ord_me'}])
     elif k == 'ton':
         step = 'ton_addr'
         text = (f"{_describe_head(d)}\n\n👛 TON hamyon manzilingizni yuboring "
@@ -427,7 +427,7 @@ def _ask_recipient(ctx: Ctx, d: dict):
         step = 'gift_user'
         text = (f"{_describe_head(d)}\n\n👤 Sovg'a oluvchining <b>Telegram ID</b> raqamini yuboring "
                 "yoki o'zingizga yuboring.")
-        rows.append([{'text': "🎁 O'zimga", 'callback_data': 'ord_me'}])
+        rows.append([{'text': "🎁 O'zimga", 'style': 'primary', 'callback_data': 'ord_me'}])
     rows.append(CANCEL_ROW)
     _draft_set(ctx.uid, d)
     _step_set(ctx.uid, step)
@@ -445,7 +445,7 @@ def _show_confirm(ctx: Ctx, d: dict):
     _step_set(ctx.uid, 'confirm')
     text = (f"🧾 <b>Buyurtmani tasdiqlang</b>\n\n{_describe(d)}\n\n"
             f"💰 To'lov summasi: <b>{P.fmt(price)} so'm</b>")
-    _screen(ctx, text, [[{'text': "✅ Tasdiqlash", 'callback_data': 'ord_confirm'}], CANCEL_ROW])
+    _screen(ctx, text, [[{'text': "✅ Tasdiqlash", 'style': 'success', 'callback_data': 'ord_confirm'}], CANCEL_ROW])
 
 
 def _validate_username(ctx: Ctx, d: dict, raw: str):
@@ -573,9 +573,9 @@ def confirm_order(ctx: Ctx):
                 "«💳 To'lash» tugmasini bosib to'lang. To'lov kelgach buyurtma avtomatik bajariladi; "
                 "xabar kelmasa «🔄 To'lovni tekshirish» ni bosing.")
         return _screen(ctx, text, [
-            [{'text': "💳 To'lash", 'url': inv['pay_url']}],
-            [{'text': "🔄 To'lovni tekshirish", 'callback_data': f'ord_chk_{oid}'}],
-            [{'text': "❌ Buyurtmani bekor qilish", 'callback_data': f'ord_xcl_{oid}'}],
+            [{'text': "💳 To'lash", 'style': 'success', 'url': inv['pay_url']}],
+            [{'text': "🔄 To'lovni tekshirish", 'style': 'primary', 'callback_data': f'ord_chk_{oid}'}],
+            [{'text': "❌ Buyurtmani bekor qilish", 'style': 'danger', 'callback_data': f'ord_xcl_{oid}'}],
         ])
 
     text = (f"🧾 <b>Buyurtma #{oid}</b>\n\n{_describe(d)}\n\n"
@@ -584,7 +584,7 @@ def confirm_order(ctx: Ctx):
             + (f"👤 Qabul qiluvchi: <b>{_h(owner)}</b>\n" if owner else "") +
             "\n❗️ Aynan shu summani o'tkazing, so'ng <b>to'lov chekini (skrinshot) rasm qilib shu yerga yuboring</b>. "
             "Admin tekshirgach, buyurtmangiz avtomatik bajariladi.")
-    _screen(ctx, text, [[{'text': "❌ Buyurtmani bekor qilish", 'callback_data': f'ord_xcl_{oid}'}]])
+    _screen(ctx, text, [[{'text': "❌ Buyurtmani bekor qilish", 'style': 'danger', 'callback_data': f'ord_xcl_{oid}'}]])
 
 
 # =============================================================== tolov.go: to'lov kelganda
@@ -648,8 +648,8 @@ def _admin_order_text(o: dict) -> str:
 
 
 def _admin_buttons(oid):
-    return [[{'text': "✅ Tasdiqlash", 'callback_data': f'adm_ok_{oid}'},
-             {'text': "❌ Rad etish", 'callback_data': f'adm_no_{oid}'}]]
+    return [[{'text': "✅ Tasdiqlash", 'style': 'success', 'callback_data': f'adm_ok_{oid}'},
+             {'text': "❌ Rad etish", 'style': 'danger', 'callback_data': f'adm_no_{oid}'}]]
 
 
 def handle_receipt(ctx: Ctx, msg):
@@ -816,8 +816,8 @@ def _fulfill(oid, connect):
         _send(bot, settings.ADMIN_ID,
               f"⚠️ <b>#{oid} bajarilmadi</b>\n<code>{_h(err)}</code>\n\n"
               "❗️ Qayta urinishdan oldin hamyon tranzaksiyalarini tekshiring (pul chiqib ketgan bo'lsa, ikki marta to'lamang).",
-              [[{'text': "🔁 Qayta urinish", 'callback_data': f'adm_retry_{oid}'},
-                {'text': "❌ Rad etish (qaytarish)", 'callback_data': f'adm_no_{oid}'}]])
+              [[{'text': "🔁 Qayta urinish", 'style': 'primary', 'callback_data': f'adm_retry_{oid}'},
+                {'text': "❌ Rad etish (qaytarish)", 'style': 'danger', 'callback_data': f'adm_no_{oid}'}]])
 
 
 # =============================================================== admin buyruqlari
