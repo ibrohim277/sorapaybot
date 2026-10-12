@@ -37,7 +37,7 @@ STARS_PACKS = [50, 100, 250, 500, 1000]
 STARS_MIN, STARS_MAX = 50, 100000
 TON_MIN, TON_MAX = 1.0, 500.0
 
-BACK = [{'text': "⬅️ Orqaga", 'callback_data': 'menu'}]
+BACK = [{'text': "⬅️ Orqaga", 'style': 'primary', 'callback_data': 'menu'}]
 USERNAME_RE = re.compile(r'^[A-Za-z][A-Za-z0-9_]{4,31}$')
 TON_ADDR_RE = re.compile(r'^(EQ|UQ|kQ|0Q)[A-Za-z0-9_\-]{46}$')
 
@@ -168,20 +168,20 @@ def _log(bot, text):
 def _start_stars(bot, chat_id, message_id):
     rows, row = [], []
     for q in STARS_PACKS:
-        row.append({'text': f"⭐ {q} — {_fmt(price_stars(q))} so'm", 'callback_data': f"st_q_{q}"})
+        row.append({'text': f"⭐ {q} — {_fmt(price_stars(q))} so'm", 'style': 'primary', 'callback_data': f"st_q_{q}"})
         if len(row) == 2:
             rows.append(row)
             row = []
     if row:
         rows.append(row)
-    rows.append([{'text': "✏️ Boshqa miqdor", 'callback_data': 'st_q_custom'}])
+    rows.append([{'text': "✏️ Boshqa miqdor", 'style': 'primary', 'callback_data': 'st_q_custom'}])
     rows.append(BACK)
     _show(bot, chat_id, message_id,
           f"⭐ <b>Telegram Stars</b>\n\nMiqdorni tanlang (minimal {STARS_MIN} ta):", rows)
 
 
 def _start_premium(bot, chat_id, message_id):
-    rows = [[{'text': f"💎 {m} oy — {_fmt(price_premium(m))} so'm", 'callback_data': f"pr_m_{m}"}]
+    rows = [[{'text': f"💎 {m} oy — {_fmt(price_premium(m))} so'm", 'style': 'primary', 'callback_data': f"pr_m_{m}"}]
             for m in (3, 6, 12)]
     rows.append(BACK)
     _show(bot, chat_id, message_id, "💎 <b>Telegram Premium</b>\n\nMuddatni tanlang:", rows)
@@ -209,7 +209,7 @@ def _start_gift(bot, chat_id, message_id):
     for g in gifts:
         label = f"{getattr(g, 'emoji', '') or getattr(getattr(g, 'sticker', None), 'emoji', '🎁')} " \
                 f"{g.star_count}⭐ — {_fmt(price_stars(g.star_count))} so'm"
-        rows.append([{'text': label, 'callback_data': f"gf_{g.id}_{g.star_count}"}])
+        rows.append([{'text': label, 'style': 'primary', 'callback_data': f"gf_{g.id}_{g.star_count}"}])
     rows.append(BACK)
     _show(bot, chat_id, message_id,
           "🎁 <b>Telegram Gift</b>\n\nSovg'ani tanlang (sovg'a sizning akkauntingizga yuboriladi):", rows)
@@ -234,7 +234,7 @@ def _confirm_screen(bot, uid, chat_id, message_id, flow, connect):
     text = (f"🧾 <b>Buyurtmani tasdiqlang</b>\n\n{what}\n\n"
             f"💵 Narxi: <b>{_fmt(price)} so'm</b>\n💳 Balansingiz: {_fmt(bal)} so'm")
     _show(bot, chat_id, message_id, text,
-          [[{'text': "✅ Tasdiqlash", 'callback_data': f"ok_{kind}"}], BACK])
+          [[{'text': "✅ Tasdiqlash", 'style': 'success', 'callback_data': f"ok_{kind}"}], BACK])
 
 
 # ------------------------------------------------------------------ bajarish

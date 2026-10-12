@@ -81,8 +81,8 @@ def _grid(buttons, per_row=2):
     return [buttons[i:i + per_row] for i in range(0, len(buttons), per_row)]
 
 
-CANCEL_ROW = [{'text': "❌ Bekor qilish", 'callback_data': 'ord_cancel'}]
-BACK_ROW = [{'text': "⬅️ Orqaga", 'callback_data': 'menu'}]
+CANCEL_ROW = [{'text': "❌ Bekor qilish", 'style': 'danger', 'callback_data': 'ord_cancel'}]
+BACK_ROW = [{'text': "⬅️ Orqaga", 'style': 'primary', 'callback_data': 'menu'}]
 
 
 # =============================================================== step / qoralama (draft)
@@ -251,6 +251,10 @@ def _card(connect):
 
 # =============================================================== TON / hamyon (lazy import)
 
+class BalanceShort(Exception):
+    """Buyurtmani bajarish uchun botda balans (TON / Stars) yetarli emas."""
+
+
 class WalletNotFunded(Exception):
     """Bot hamyoni blokcheynda hali mavjud emas (unga hech qachon TON tushmagan) — tonapi 404 'entity not found'."""
     def __init__(self, address: str):
@@ -353,9 +357,9 @@ def _price(d: dict, rate: float) -> int:
 def start_stars(ctx: Ctx):
     _flow_clear(ctx.uid)
     rate = _rate(ctx.connect)
-    btns = [{'text': f"⭐️ {n} · {P.fmt(P.stars_price(n, rate))} so'm", 'callback_data': f'stars_q_{n}'}
+    btns = [{'text': f"⭐️ {n} · {P.fmt(P.stars_price(n, rate))} so'm", 'style': 'primary', 'callback_data': f'stars_q_{n}'}
             for n in P.STARS_PACKS]
-    rows = _grid(btns) + [[{'text': "✏️ Boshqa miqdor", 'callback_data': 'stars_q_custom'}], BACK_ROW]
+    rows = _grid(btns) + [[{'text': "✏️ Boshqa miqdor", 'style': 'primary', 'callback_data': 'stars_q_custom'}], BACK_ROW]
     _ans(ctx)
     _screen(ctx, "⭐️ <b>Telegram Stars</b>\n\nKerakli miqdorni tanlang yoki o'zingiz kiriting "
                  f"(min {P.STARS_MIN}, max {P.fmt(P.STARS_MAX)}):", rows)
@@ -364,7 +368,7 @@ def start_stars(ctx: Ctx):
 def start_premium(ctx: Ctx):
     _flow_clear(ctx.uid)
     rate = _rate(ctx.connect)
-    btns = [{'text': f"💎 {m} oy · {P.fmt(P.premium_price(m, rate))} so'm", 'callback_data': f'prem_m_{m}'}
+    btns = [{'text': f"💎 {m} oy · {P.fmt(P.premium_price(m, rate))} so'm", 'style': 'primary', 'callback_data': f'prem_m_{m}'}
             for m in sorted(P.PREMIUM_TON)]
     _ans(ctx)
     _screen(ctx, "💎 <b>Telegram Premium</b>\n\nMuddatni tanlang:", _grid(btns, 1) + [BACK_ROW])
@@ -373,9 +377,9 @@ def start_premium(ctx: Ctx):
 def start_ton(ctx: Ctx):
     _flow_clear(ctx.uid)
     rate = _rate(ctx.connect)
-    btns = [{'text': f"💎 {n} TON · {P.fmt(P.ton_price(n, rate))} so'm", 'callback_data': f'ton_q_{n}'}
+    btns = [{'text': f"💎 {n} TON · {P.fmt(P.ton_price(n, rate))} so'm", 'style': 'primary', 'callback_data': f'ton_q_{n}'}
             for n in P.TON_PACKS]
-    rows = _grid(btns) + [[{'text': "✏️ Boshqa miqdor", 'callback_data': 'ton_q_custom'}], BACK_ROW]
+    rows = _grid(btns) + [[{'text': "✏️ Boshqa miqdor", 'style': 'primary', 'callback_data': 'ton_q_custom'}], BACK_ROW]
     _ans(ctx)
     _screen(ctx, f"💎 <b>TON coin</b>\n\nMiqdorni tanlang yoki o'zingiz kiriting (min {P.TON_MIN}, max {P.TON_MAX}):", rows)
 
@@ -402,7 +406,7 @@ def start_gift(ctx: Ctx):
         return _ans(ctx, "Hozircha sovg'alar mavjud emas. Keyinroq urinib ko'ring.", True)
     rate = _rate(ctx.connect)
     btns = [{'text': f"{g['emoji']} {g['stars']}⭐️ · {P.fmt(P.stars_price(g['stars'], rate))}",
-             'callback_data': f"gift_g_{g['id']}"} for g in gifts]
+             'style': 'primary', 'callback_data': f"gift_g_{g['id']}"} for g in gifts]
     _ans(ctx)
     _screen(ctx, "🎁 <b>Telegram Gift</b>\n\nSovg'ani tanlang (narx so'mda):", _grid(btns) + [BACK_ROW])
 
@@ -417,7 +421,7 @@ def _ask_recipient(ctx: Ctx, d: dict):
         text = (f"{_describe_head(d)}\n\n👤 Kimga yuboramiz? Telegram <b>@username</b> kiriting "
                 "(masalan: <code>@durov</code>)")
         if ctx.username:
-            rows.append([{'text': "👤 O'zimga", 'callback_data': 'ord_me'}])
+            rows.append([{'text': "👤 O'zimga", 'style': 'primary', 'callback_data': 'ord_me'}])
     elif k == 'ton':
         step = 'ton_addr'
         text = (f"{_describe_head(d)}\n\n👛 TON hamyon manzilingizni yuboring "
@@ -427,7 +431,7 @@ def _ask_recipient(ctx: Ctx, d: dict):
         step = 'gift_user'
         text = (f"{_describe_head(d)}\n\n👤 Sovg'a oluvchining <b>Telegram ID</b> raqamini yuboring "
                 "yoki o'zingizga yuboring.")
-        rows.append([{'text': "🎁 O'zimga", 'callback_data': 'ord_me'}])
+        rows.append([{'text': "🎁 O'zimga", 'style': 'primary', 'callback_data': 'ord_me'}])
     rows.append(CANCEL_ROW)
     _draft_set(ctx.uid, d)
     _step_set(ctx.uid, step)
@@ -445,7 +449,7 @@ def _show_confirm(ctx: Ctx, d: dict):
     _step_set(ctx.uid, 'confirm')
     text = (f"🧾 <b>Buyurtmani tasdiqlang</b>\n\n{_describe(d)}\n\n"
             f"💰 To'lov summasi: <b>{P.fmt(price)} so'm</b>")
-    _screen(ctx, text, [[{'text': "✅ Tasdiqlash", 'callback_data': 'ord_confirm'}], CANCEL_ROW])
+    _screen(ctx, text, [[{'text': "✅ Tasdiqlash", 'style': 'success', 'callback_data': 'ord_confirm'}], CANCEL_ROW])
 
 
 def _validate_username(ctx: Ctx, d: dict, raw: str):
@@ -491,6 +495,7 @@ def _stock_check(ctx: Ctx, d: dict):
         need = P.required_ton(d['kind'], d['qty']) + P.WALLET_RESERVE_TON
         bal = _wallet_balance_ton()
         if bal < need:
+<<<<<<< HEAD
             _alert_admin(ctx.bot, 'wallet_low', f"⚠️ Bot hamyonida TON kam: bor {bal:.2f}, kerak ~{need:.2f}. Hamyonni to'ldiring (/hamyon).")
             if P.BLOCK_ORDERS_IF_WALLET_EMPTY:
                 if _is_admin(ctx.uid):
@@ -504,6 +509,19 @@ def _stock_check(ctx: Ctx, d: dict):
             if _is_admin(ctx.uid):
                 return False, f"Hamyon bo'sh. TON yuboring: {e.address}"
             return False, "Hozircha bu xizmat vaqtincha mavjud emas (zaxira tugagan). Keyinroq urinib ko'ring."
+=======
+            _alert_admin(ctx.bot, 'wallet_low', f"⚠️ Bot hamyonida TON yetarli emas: bor {bal:.2f}, kerak ~{need:.2f}. Mijoz to'lov qilsa ham buyurtma bajarilmaydi — hamyonni to'ldiring.")
+            if _is_admin(ctx.uid):
+                return False, f"Hamyonda TON yetarli emas: bor {bal:.2f}, kerak ~{need:.2f}."
+            return True, ''     # oddiy mijoz to'lovga o'tadi; balans yetmasa to'lovdan keyin xabar beriladi
+    except WalletNotFunded as e:
+        _alert_admin(ctx.bot, 'wallet_empty',
+                     "⚠️ Bot hamyoni hali faollashtirilmagan (TON yo'q) — mijoz to'lasa ham buyurtma bajarilmaydi.\n"
+                     f"Shu manzilga TON yuboring:\n<code>{e.address}</code>")
+        if _is_admin(ctx.uid):
+            return False, f"Hamyon bo'sh. TON yuboring: {e.address}"
+        return True, ''         # oddiy mijoz to'lovga o'tadi
+>>>>>>> 93ca27a49ca61f58cb7deb481218e629cb9bf0e4
     except Exception as e:
         logger.warning("Zaxira tekshiruvi bajarilmadi: %s", e)
     return True, ''
@@ -575,9 +593,9 @@ def confirm_order(ctx: Ctx):
                 "«💳 To'lash» tugmasini bosib to'lang. To'lov kelgach buyurtma avtomatik bajariladi; "
                 "xabar kelmasa «🔄 To'lovni tekshirish» ni bosing.")
         return _screen(ctx, text, [
-            [{'text': "💳 To'lash", 'url': inv['pay_url']}],
-            [{'text': "🔄 To'lovni tekshirish", 'callback_data': f'ord_chk_{oid}'}],
-            [{'text': "❌ Buyurtmani bekor qilish", 'callback_data': f'ord_xcl_{oid}'}],
+            [{'text': "💳 To'lash", 'style': 'success', 'url': inv['pay_url']}],
+            [{'text': "🔄 To'lovni tekshirish", 'style': 'primary', 'callback_data': f'ord_chk_{oid}'}],
+            [{'text': "❌ Buyurtmani bekor qilish", 'style': 'danger', 'callback_data': f'ord_xcl_{oid}'}],
         ])
 
     text = (f"🧾 <b>Buyurtma #{oid}</b>\n\n{_describe(d)}\n\n"
@@ -586,7 +604,7 @@ def confirm_order(ctx: Ctx):
             + (f"👤 Qabul qiluvchi: <b>{_h(owner)}</b>\n" if owner else "") +
             "\n❗️ Aynan shu summani o'tkazing, so'ng <b>to'lov chekini (skrinshot) rasm qilib shu yerga yuboring</b>. "
             "Admin tekshirgach, buyurtmangiz avtomatik bajariladi.")
-    _screen(ctx, text, [[{'text': "❌ Buyurtmani bekor qilish", 'callback_data': f'ord_xcl_{oid}'}]])
+    _screen(ctx, text, [[{'text': "❌ Buyurtmani bekor qilish", 'style': 'danger', 'callback_data': f'ord_xcl_{oid}'}]])
 
 
 # =============================================================== tolov.go: to'lov kelganda
@@ -650,8 +668,8 @@ def _admin_order_text(o: dict) -> str:
 
 
 def _admin_buttons(oid):
-    return [[{'text': "✅ Tasdiqlash", 'callback_data': f'adm_ok_{oid}'},
-             {'text': "❌ Rad etish", 'callback_data': f'adm_no_{oid}'}]]
+    return [[{'text': "✅ Tasdiqlash", 'style': 'success', 'callback_data': f'adm_ok_{oid}'},
+             {'text': "❌ Rad etish", 'style': 'danger', 'callback_data': f'adm_no_{oid}'}]]
 
 
 def handle_receipt(ctx: Ctx, msg):
@@ -752,7 +770,7 @@ def _do_fulfill(o: dict, bot):
         res = bot.getMyStarBalance()
         bal = int(getattr(getattr(res, 'result', None), 'amount', 0) or 0)
         if bal < int(qty):
-            return False, f"Botning Stars balansi yetarli emas (bor {bal}, kerak {qty}). Balansni to'ldiring."
+            raise BalanceShort(f"Botning Stars balansi yetarli emas (bor {bal}, kerak {qty}). Balansni to'ldiring.")
         res = bot.sendGift({'user_id': int(target), 'gift_id': str(o['gift_id'])})
         if not _ok(res):
             return False, f"sendGift xatosi: {getattr(res, 'description', 'noma`lum')}"
@@ -764,10 +782,15 @@ def _do_fulfill(o: dict, bot):
     try:
         bal = _wallet_balance_ton()
     except WalletNotFunded as e:
+<<<<<<< HEAD
         return False, (f"Bot hamyoni hali faollashtirilmagan (unga TON tushmagan). /hamyon bosib manzilni oling, kamida {need:.2f} TON yuboring, "
                        f"so'ng «🔁 Qayta urinish» ni bosing. Manzil: {e.address}")
+=======
+        raise BalanceShort(f"Bot hamyoni hali faollashtirilmagan (unga TON tushmagan). Shu manzilga kamida {need:.2f} TON yuboring, "
+                           f"so'ng «Qayta urinish»: {e.address}")
+>>>>>>> 93ca27a49ca61f58cb7deb481218e629cb9bf0e4
     if bal < need:
-        return False, f"Hamyonda TON yetarli emas (bor {bal:.2f}, kerak ~{need:.2f})."
+        raise BalanceShort(f"Hamyonda TON yetarli emas (bor {bal:.2f}, kerak ~{need:.2f}). Hamyonni to'ldirib, «Qayta urinish» bosing.")
 
     if kind in ('stars', 'premium'):
         ok = _run_buy(kind, target, qty)
@@ -783,8 +806,12 @@ def _fulfill(oid, connect):
     o = _order_get(connect, oid)
     if not o:
         return
+    no_balance = False
     try:
         ok, err = _do_fulfill(o, bot)
+    except BalanceShort as e:   # botda TON/Stars yo'q — texnik xato emas
+        logger.warning("Buyurtma #%s: balans yetarli emas: %s", oid, e)
+        ok, err, no_balance = False, str(e), True
     except Exception as e:      # tarmoq, tonutils, Fragment va h.k.
         logger.exception("Buyurtma #%s bajarishda xato", oid)
         ok, err = False, f"{type(e).__name__}: {e}"
@@ -812,14 +839,19 @@ def _fulfill(oid, connect):
         except Exception:
             pass
     else:
-        _notify_user(bot, o['user_id'],
-                     f"⚠️ Buyurtma <b>#{oid}</b> bajarilishida texnik nosozlik yuz berdi. "
-                     "Admin tez orada hal qiladi — to'lovingiz yo'qolmaydi.")
+        if no_balance:
+            _notify_user(bot, o['user_id'],
+                         f"⚠️ <b>Balans yo'q!</b> Botda zaxira (balans) yetarli emas, shuning uchun buyurtma <b>#{oid}</b> "
+                         "hozircha bajarilmadi. To'lovingiz yo'qolmaydi — balans to'ldirilishi bilan buyurtmangiz bajariladi.")
+        else:
+            _notify_user(bot, o['user_id'],
+                         f"⚠️ Buyurtma <b>#{oid}</b> bajarilishida texnik nosozlik yuz berdi. "
+                         "Admin tez orada hal qiladi — to'lovingiz yo'qolmaydi.")
         _send(bot, settings.ADMIN_ID,
               f"⚠️ <b>#{oid} bajarilmadi</b>\n<code>{_h(err)}</code>\n\n"
               "❗️ Qayta urinishdan oldin hamyon tranzaksiyalarini tekshiring (pul chiqib ketgan bo'lsa, ikki marta to'lamang).",
-              [[{'text': "🔁 Qayta urinish", 'callback_data': f'adm_retry_{oid}'},
-                {'text': "❌ Rad etish (qaytarish)", 'callback_data': f'adm_no_{oid}'}]])
+              [[{'text': "🔁 Qayta urinish", 'style': 'primary', 'callback_data': f'adm_retry_{oid}'},
+                {'text': "❌ Rad etish (qaytarish)", 'style': 'danger', 'callback_data': f'adm_no_{oid}'}]])
 
 
 # =============================================================== admin buyruqlari

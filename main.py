@@ -35,17 +35,17 @@ connect = cdb_connect(settings.BOT_TOKEN, settings.DB_CHANNEL_ID, settings.DB_DA
 
 MAIN_MENU = [
     [
-        {'text': "Stars olish", 'callback_data': 'buy_stars', 'icon_custom_emoji_id': "5363844691580177304"},
-        {'text': "Premium olish", 'callback_data': 'buy_premium', 'icon_custom_emoji_id': "5388584703932522832"},
+        {'text': "Stars olish", 'style': 'primary', 'callback_data': 'buy_stars', 'icon_custom_emoji_id': "5363844691580177304"},
+        {'text': "Premium olish", 'style': 'primary', 'callback_data': 'buy_premium', 'icon_custom_emoji_id': "5388584703932522832"},
     ],
     [
-        {'text': "Gift olish", 'callback_data': 'buy_gift', 'icon_custom_emoji_id': "5293983582472135373"},
-        {'text': "Ton olish", 'callback_data': 'buy_ton', 'icon_custom_emoji_id': "5406976471153545018"},
+        {'text': "Gift olish", 'style': 'primary', 'callback_data': 'buy_gift', 'icon_custom_emoji_id': "5293983582472135373"},
+        {'text': "Ton olish", 'style': 'primary', 'callback_data': 'buy_ton', 'icon_custom_emoji_id': "5406976471153545018"},
     ],
-    [{'text': "Statistikam", 'callback_data': 'statistika', 'icon_custom_emoji_id': "5936143551854285132"}],
+    [{'text': "Statistikam", 'style': 'primary', 'callback_data': 'statistika', 'icon_custom_emoji_id': "5936143551854285132"}],
     [
-        {'text': "Referal", 'callback_data': 'ref', 'icon_custom_emoji_id': "5409257566939134596"},
-        {'text': "Profilim", 'callback_data': 'profil', 'icon_custom_emoji_id': "5409014699423446355"},
+        {'text': "Referal", 'style': 'primary', 'callback_data': 'ref', 'icon_custom_emoji_id': "5409257566939134596"},
+        {'text': "Profilim", 'style': 'primary', 'callback_data': 'profil', 'icon_custom_emoji_id': "5409014699423446355"},
     ],
 ]
 
@@ -162,9 +162,9 @@ def tugma_edit(user_id, bot: Begzod, first_name: str = '') -> None:
             data = {'ok': False}
         if not data.get('ok'):
             all_subscribed = False
-            keyboard.append([{'text': "Obuna bo'lish", 'url': other_bot['bot_link'], 'icon_custom_emoji_id': "5409380965644514142"}])
+            keyboard.append([{'text': "Obuna bo'lish", 'style': 'primary', 'url': other_bot['bot_link'], 'icon_custom_emoji_id': "5409380965644514142"}])
 
-    keyboard.append([{'text': "Tasdiqlash", 'callback_data': 'check_obuna', 'icon_custom_emoji_id': "5408909562919007848"}])
+    keyboard.append([{'text': "Tasdiqlash", 'style': 'success', 'callback_data': 'check_obuna', 'icon_custom_emoji_id': "5408909562919007848"}])
 
     message_id = read_step(f"{user_id}.txt")
     if message_id:
@@ -279,10 +279,10 @@ def majburiy(user_id, bot: Begzod, edit_buttons: bool = False, first_name: str =
             data = {'ok': False}
         if not data.get('ok'):
             all_subscribed = False
-            keyboard.append([{'text': "Obuna bo'lish", 'url': other_bot['bot_link'], 'icon_custom_emoji_id': "5409380965644514142"}])
+            keyboard.append([{'text': "Obuna bo'lish", 'style': 'primary', 'url': other_bot['bot_link'], 'icon_custom_emoji_id': "5409380965644514142"}])
 
     if not all_subscribed:
-        keyboard.append([{'text': "Tasdiqlash", 'callback_data': 'check_obuna', 'icon_custom_emoji_id': "5408909562919007848"}])
+        keyboard.append([{'text': "Tasdiqlash", 'style': 'success', 'callback_data': 'check_obuna', 'icon_custom_emoji_id': "5408909562919007848"}])
 
         if edit_buttons:
             mid = read_step(f"{user_id}.txt")
@@ -451,9 +451,9 @@ sana='{sana}'
 """)
 
         keyboard = {'inline_keyboard': [[
-            {'text': str(options[0]), 'callback_data': f"captcha_{options[0]}"},
-            {'text': str(options[1]), 'callback_data': f"captcha_{options[1]}"},
-            {'text': str(options[2]), 'callback_data': f"captcha_{options[2]}"},
+            {'text': str(options[0]), 'style': 'primary', 'callback_data': f"captcha_{options[0]}"},
+            {'text': str(options[1]), 'style': 'primary', 'callback_data': f"captcha_{options[1]}"},
+            {'text': str(options[2]), 'style': 'primary', 'callback_data': f"captcha_{options[2]}"},
         ]]}
 
         bot.sendMessage({
