@@ -491,17 +491,19 @@ def _stock_check(ctx: Ctx, d: dict):
         need = P.required_ton(d['kind'], d['qty']) + P.WALLET_RESERVE_TON
         bal = _wallet_balance_ton()
         if bal < need:
-            _alert_admin(ctx.bot, 'wallet_low', f"⚠️ Bot hamyonida TON yetarli emas: bor {bal:.2f}, kerak ~{need:.2f}. Mijoz xarid qila olmadi — hamyonni to'ldiring.")
-            if _is_admin(ctx.uid):
-                return False, f"Hamyonda TON yetarli emas: bor {bal:.2f}, kerak ~{need:.2f}."
-            return False, "Hozircha bu miqdorni berib bo'lmaydi (zaxira yetarli emas). Kichikroq miqdorni tanlang yoki keyinroq urining."
+            _alert_admin(ctx.bot, 'wallet_low', f"⚠️ Bot hamyonida TON kam: bor {bal:.2f}, kerak ~{need:.2f}. Hamyonni to'ldiring (/hamyon).")
+            if P.BLOCK_ORDERS_IF_WALLET_EMPTY:
+                if _is_admin(ctx.uid):
+                    return False, f"Hamyonda TON yetarli emas: bor {bal:.2f}, kerak ~{need:.2f}."
+                return False, "Hozircha bu miqdorni berib bo'lmaydi (zaxira yetarli emas). Kichikroq miqdorni tanlang yoki keyinroq urining."
     except WalletNotFunded as e:
         _alert_admin(ctx.bot, 'wallet_empty',
-                     "⚠️ Bot hamyoni hali faollashtirilmagan (TON yo'q) — mijozlar xarid qila olmayapti.\n"
-                     f"Shu manzilga TON yuboring:\n<code>{e.address}</code>")
-        if _is_admin(ctx.uid):
-            return False, f"Hamyon bo'sh. TON yuboring: {e.address}"
-        return False, "Hozircha bu xizmat vaqtincha mavjud emas (zaxira tugagan). Keyinroq urinib ko'ring."
+                     "⚠️ Bot hamyoni hali faollashtirilmagan (TON yo'q). Buyurtmalar qabul qilinmoqda, lekin TON tushmaguncha bajarilmaydi.\n"
+                     f"Hamyon manzili (/hamyon):\n<code>{e.address}</code>")
+        if P.BLOCK_ORDERS_IF_WALLET_EMPTY:
+            if _is_admin(ctx.uid):
+                return False, f"Hamyon bo'sh. TON yuboring: {e.address}"
+            return False, "Hozircha bu xizmat vaqtincha mavjud emas (zaxira tugagan). Keyinroq urinib ko'ring."
     except Exception as e:
         logger.warning("Zaxira tekshiruvi bajarilmadi: %s", e)
     return True, ''
@@ -762,8 +764,8 @@ def _do_fulfill(o: dict, bot):
     try:
         bal = _wallet_balance_ton()
     except WalletNotFunded as e:
-        return False, (f"Bot hamyoni hali faollashtirilmagan (unga TON tushmagan). Shu manzilga kamida {need:.2f} TON yuboring, "
-                       f"so'ng «Qayta urinish»: {e.address}")
+        return False, (f"Bot hamyoni hali faollashtirilmagan (unga TON tushmagan). /hamyon bosib manzilni oling, kamida {need:.2f} TON yuboring, "
+                       f"so'ng «🔁 Qayta urinish» ni bosing. Manzil: {e.address}")
     if bal < need:
         return False, f"Hamyonda TON yetarli emas (bor {bal:.2f}, kerak ~{need:.2f})."
 
@@ -825,6 +827,29 @@ def _fulfill(oid, connect):
 def _admin_command(ctx: Ctx, text: str) -> bool:
     parts = text.strip().split(maxsplit=2)
     cmd = parts[0].split('@')[0].lower()
+
+    if cmd == '/hamyon':
+        if not settings.MNEMONIC_LIST:
+            _send(ctx.bot, ctx.chat_id,
+                  "❌ Hamyon sozlanmagan: Render → Environment'da <code>MNEMONIC</code> (12/24 so'z) kiriting.")
+            return True
+        try:
+            addr, bal = _wallet_info()
+        except Exception as e:
+            _send(ctx.bot, ctx.chat_id, f"❌ Hamyonga ulanib bo'lmadi: <code>{_h(type(e).__name__)}: {_h(e)}</code>")
+            return True
+        if bal is None:
+            state = "⚠️ Faollashtirilmagan — unga hali TON tushmagan."
+        else:
+            state = f"💰 Balans: <b>{bal:.2f} TON</b>"
+        mode = ("tolovgo (avtomatik)" if payments.enabled() else "karta + chek (admin tasdig'i)")
+        _send(ctx.bot, ctx.chat_id,
+              f"👛 <b>Bot hamyoni</b>\n\n{state}\n\nManzil (TON yuborish uchun):\n<code>{_h(addr)}</code>\n\n"
+              f"🔗 https://tonviewer.com/{_h(addr)}\n\n"
+              f"💳 To'lov rejimi: <b>{mode}</b>\n"
+              "ℹ️ Stars/Premium/TON xaridlari shu hamyondagi TON hisobidan bajariladi. "
+              "To'ldirgandan so'ng bajarilmay qolgan buyurtmada «🔁 Qayta urinish» ni bosing.")
+        return True
 
     if cmd == '/karta':
         if len(parts) < 2 or not re.fullmatch(r'\d{12,19}', parts[1].replace(' ', '')):

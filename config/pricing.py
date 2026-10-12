@@ -35,6 +35,12 @@ TON_MIN, TON_MAX = 1, 100
 # Fragment/TON hamyonda har doim qoldiriladigan zaxira (komissiya uchun)
 WALLET_RESERVE_TON = 0.1
 
+# Bot hamyonida TON yetarli bo'lmasa (yoki hamyon hali faollashtirilmagan bo'lsa):
+#   False — mijoz buyurtma bera oladi/to'lay oladi; buyurtma bajarilmasa, adminda «🔁 Qayta urinish»
+#           tugmasi chiqadi (hamyonni to'ldirgach bosiladi). Mijozga xato ko'rsatilmaydi.
+#   True  — avvalgidek: hamyon to'lmaguncha mijoz buyurtma bera olmaydi.
+BLOCK_ORDERS_IF_WALLET_EMPTY = False
+
 # --- To'lov rekvizitlari (bo'sh bo'lsa — adminning /karta buyrug'i ishlatiladi)
 CARD_NUMBER = '5614 6835 1653 0409'
 CARD_OWNER = 'Xamidullayeva mafirat'

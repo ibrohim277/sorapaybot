@@ -10,8 +10,15 @@ ADMIN TASDIQLAMASDAN bajariladi.
 """
 import os
 
-TOLOV_API_URL = os.environ.get('TOLOV_API_URL', '')   # masalan: 'https://api.sayt.uz'  (oxirida "/" bo'lmasin)
-TOLOV_API_KEY = os.environ.get('TOLOV_API_KEY', '')
+# >>> tolovgo saytidan olgan API URL va KEY'ni SHU YERGA O'ZINGIZ yozing (qo'shtirnoq ichiga). <<<
+# Ikkalasi ham BO'SH bo'lsa  -> karta + chek rasmi (admin tasdig'i) rejimi ishlaydi.
+# Ikkalasi ham TO'LDIRILSA  -> tolovgo orqali avtomatik to'lov ishlaydi.
+# (Xohlasangiz Render > Environment'ga TOLOV_API_URL / TOLOV_API_KEY qo'ysangiz ham bo'ladi — u ustun turadi.)
+TOLOV_API_URL_VALUE = ''   # masalan: 'https://api.sayt.uz'  (oxirida "/" bo'lmasin)
+TOLOV_API_KEY_VALUE = ''
+
+TOLOV_API_URL = os.environ.get('TOLOV_API_URL', '').strip() or TOLOV_API_URL_VALUE
+TOLOV_API_KEY = os.environ.get('TOLOV_API_KEY', '').strip() or TOLOV_API_KEY_VALUE
 
 # Gateway to'lovni bildirganda chaqiradigan manzil maxfiy kaliti. Bo'sh bo'lsa BOT_TOKEN dan avtomatik hosil bo'ladi.
 TOLOV_WEBHOOK_SECRET = os.environ.get('TOLOV_WEBHOOK_SECRET', '')
