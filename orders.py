@@ -251,6 +251,10 @@ def _card(connect):
 
 # =============================================================== TON / hamyon (lazy import)
 
+class BalanceShort(Exception):
+    """Buyurtmani bajarish uchun botda balans (TON / Stars) yetarli emas."""
+
+
 class WalletNotFunded(Exception):
     """Bot hamyoni blokcheynda hali mavjud emas (unga hech qachon TON tushmagan) — tonapi 404 'entity not found'."""
     def __init__(self, address: str):
@@ -491,17 +495,17 @@ def _stock_check(ctx: Ctx, d: dict):
         need = P.required_ton(d['kind'], d['qty']) + P.WALLET_RESERVE_TON
         bal = _wallet_balance_ton()
         if bal < need:
-            _alert_admin(ctx.bot, 'wallet_low', f"⚠️ Bot hamyonida TON yetarli emas: bor {bal:.2f}, kerak ~{need:.2f}. Mijoz xarid qila olmadi — hamyonni to'ldiring.")
+            _alert_admin(ctx.bot, 'wallet_low', f"⚠️ Bot hamyonida TON yetarli emas: bor {bal:.2f}, kerak ~{need:.2f}. Mijoz to'lov qilsa ham buyurtma bajarilmaydi — hamyonni to'ldiring.")
             if _is_admin(ctx.uid):
                 return False, f"Hamyonda TON yetarli emas: bor {bal:.2f}, kerak ~{need:.2f}."
-            return False, "Hozircha bu miqdorni berib bo'lmaydi (zaxira yetarli emas). Kichikroq miqdorni tanlang yoki keyinroq urining."
+            return True, ''     # oddiy mijoz to'lovga o'tadi; balans yetmasa to'lovdan keyin xabar beriladi
     except WalletNotFunded as e:
         _alert_admin(ctx.bot, 'wallet_empty',
-                     "⚠️ Bot hamyoni hali faollashtirilmagan (TON yo'q) — mijozlar xarid qila olmayapti.\n"
+                     "⚠️ Bot hamyoni hali faollashtirilmagan (TON yo'q) — mijoz to'lasa ham buyurtma bajarilmaydi.\n"
                      f"Shu manzilga TON yuboring:\n<code>{e.address}</code>")
         if _is_admin(ctx.uid):
             return False, f"Hamyon bo'sh. TON yuboring: {e.address}"
-        return False, "Hozircha bu xizmat vaqtincha mavjud emas (zaxira tugagan). Keyinroq urinib ko'ring."
+        return True, ''         # oddiy mijoz to'lovga o'tadi
     except Exception as e:
         logger.warning("Zaxira tekshiruvi bajarilmadi: %s", e)
     return True, ''
@@ -750,7 +754,7 @@ def _do_fulfill(o: dict, bot):
         res = bot.getMyStarBalance()
         bal = int(getattr(getattr(res, 'result', None), 'amount', 0) or 0)
         if bal < int(qty):
-            return False, f"Botning Stars balansi yetarli emas (bor {bal}, kerak {qty}). Balansni to'ldiring."
+            raise BalanceShort(f"Botning Stars balansi yetarli emas (bor {bal}, kerak {qty}). Balansni to'ldiring.")
         res = bot.sendGift({'user_id': int(target), 'gift_id': str(o['gift_id'])})
         if not _ok(res):
             return False, f"sendGift xatosi: {getattr(res, 'description', 'noma`lum')}"
@@ -762,10 +766,10 @@ def _do_fulfill(o: dict, bot):
     try:
         bal = _wallet_balance_ton()
     except WalletNotFunded as e:
-        return False, (f"Bot hamyoni hali faollashtirilmagan (unga TON tushmagan). Shu manzilga kamida {need:.2f} TON yuboring, "
-                       f"so'ng «Qayta urinish»: {e.address}")
+        raise BalanceShort(f"Bot hamyoni hali faollashtirilmagan (unga TON tushmagan). Shu manzilga kamida {need:.2f} TON yuboring, "
+                           f"so'ng «Qayta urinish»: {e.address}")
     if bal < need:
-        return False, f"Hamyonda TON yetarli emas (bor {bal:.2f}, kerak ~{need:.2f})."
+        raise BalanceShort(f"Hamyonda TON yetarli emas (bor {bal:.2f}, kerak ~{need:.2f}). Hamyonni to'ldirib, «Qayta urinish» bosing.")
 
     if kind in ('stars', 'premium'):
         ok = _run_buy(kind, target, qty)
@@ -781,8 +785,12 @@ def _fulfill(oid, connect):
     o = _order_get(connect, oid)
     if not o:
         return
+    no_balance = False
     try:
         ok, err = _do_fulfill(o, bot)
+    except BalanceShort as e:   # botda TON/Stars yo'q — texnik xato emas
+        logger.warning("Buyurtma #%s: balans yetarli emas: %s", oid, e)
+        ok, err, no_balance = False, str(e), True
     except Exception as e:      # tarmoq, tonutils, Fragment va h.k.
         logger.exception("Buyurtma #%s bajarishda xato", oid)
         ok, err = False, f"{type(e).__name__}: {e}"
@@ -810,9 +818,14 @@ def _fulfill(oid, connect):
         except Exception:
             pass
     else:
-        _notify_user(bot, o['user_id'],
-                     f"⚠️ Buyurtma <b>#{oid}</b> bajarilishida texnik nosozlik yuz berdi. "
-                     "Admin tez orada hal qiladi — to'lovingiz yo'qolmaydi.")
+        if no_balance:
+            _notify_user(bot, o['user_id'],
+                         f"⚠️ <b>Balans yo'q!</b> Botda zaxira (balans) yetarli emas, shuning uchun buyurtma <b>#{oid}</b> "
+                         "hozircha bajarilmadi. To'lovingiz yo'qolmaydi — balans to'ldirilishi bilan buyurtmangiz bajariladi.")
+        else:
+            _notify_user(bot, o['user_id'],
+                         f"⚠️ Buyurtma <b>#{oid}</b> bajarilishida texnik nosozlik yuz berdi. "
+                         "Admin tez orada hal qiladi — to'lovingiz yo'qolmaydi.")
         _send(bot, settings.ADMIN_ID,
               f"⚠️ <b>#{oid} bajarilmadi</b>\n<code>{_h(err)}</code>\n\n"
               "❗️ Qayta urinishdan oldin hamyon tranzaksiyalarini tekshiring (pul chiqib ketgan bo'lsa, ikki marta to'lamang).",
